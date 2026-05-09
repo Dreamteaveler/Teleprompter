@@ -1,0 +1,10 @@
+提词器 (Teleprompter)
+Copyright 2024 杭州星奥传媒有限公司（影视飓风）
+
+本项目基于影视飓风提词器（Apache-2.0 许可）的源代码重新实现。
+
+原始项目地址：https://github.com/YSFXMedia/teleprompter
+
+修改者：DreamTeaveler
+修改说明：本软件基于原始影视飓风提词器源代码进行了重新实现和功能扩展，
+包括但不限于界面重构、功能增强和性能优化。

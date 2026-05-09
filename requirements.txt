@@ -1,0 +1,4 @@
+PyQt6>=6.6.0
+PyQt6-WebEngine>=6.6.0
+python-docx>=1.0.0
+markdown>=3.4

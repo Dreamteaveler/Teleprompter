@@ -7,7 +7,7 @@
 #
 import sqlite3
 import os
-import sys
+import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional
@@ -16,6 +16,8 @@ from app.models import Manuscript
 
 
 def _get_app_dir() -> str:
+    """数据目录基于可执行文件位置（非 _MEIPASS），确保数据持久化。"""
+    import sys
     if getattr(sys, 'frozen', False):
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,19 +28,32 @@ DATA_DIR = os.path.join(APP_DIR, "data")
 DB_PATH = os.path.join(DATA_DIR, "teleprompter.db")
 DOCS_DIR = os.path.join(DATA_DIR, "documents")
 
+# 线程本地存储，每个线程复用一个连接
+_local = threading.local()
+
+
+def _get_persistent_connection() -> sqlite3.Connection:
+    """获取当前线程的持久连接（首次调用时创建）。"""
+    conn = getattr(_local, 'conn', None)
+    if conn is None:
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.text_factory = str
+        conn.execute("PRAGMA encoding = 'UTF-8'")
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
+        _local.conn = conn
+    return conn
+
 
 @contextmanager
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.text_factory = str
-    conn.execute("PRAGMA encoding = 'UTF-8'")
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
+    conn = _get_persistent_connection()
     try:
         yield conn
-    finally:
-        conn.close()
+    except Exception:
+        conn.rollback()
+        raise
 
 
 def init_database():

@@ -11,19 +11,9 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 
 import re
-import sys
-import os
 
+from app.paths import mathjax_base_url
 from app.shortcut_manager import ShortcutManager
-
-
-def _mathjax_base_url() -> QUrl:
-    if getattr(sys, 'frozen', False):
-        base = sys._MEIPASS
-    else:
-        base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    mathjax_dir = os.path.join(base, "app", "mathjax")
-    return QUrl.fromLocalFile(mathjax_dir)
 
 ASPECT_RATIO = 16.0 / 9.0
 
@@ -121,7 +111,7 @@ class MirrorWindow(QMainWindow):
         html = re.sub(r'(</head>)', flip_tag + r'\1', html)
         html = re.sub(r'(<body[^>]*>)', r'\1<div class="flip-wrapper">', html)
         html = re.sub(r'(<div\s+id="rl"[^>]*>)', r'</div>\1', html)
-        self._view.setHtml(html, _mathjax_base_url())
+        self._view.setHtml(html, mathjax_base_url())
 
     def _rebuild_with_scroll(self, scroll_y: float):
         self._pending_scroll_y = scroll_y

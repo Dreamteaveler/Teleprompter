@@ -7,7 +7,7 @@
 # 本项目基于影视飓风提词器（Apache-2.0 许可）的源代码重新实现。
 #
 
-__version__ = "1.04"
+__version__ = "1.05"
 
 import sys
 import io
@@ -23,15 +23,8 @@ from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 
 from app.database import init_database
+from app.paths import resolve_path
 from app.pages.main_window import MainWindow
-
-
-def _resolve_path(relative_path: str) -> str:
-    if getattr(sys, 'frozen', False):
-        base = sys._MEIPASS
-    else:
-        base = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(base, relative_path)
 
 
 def load_stylesheet(app: QApplication) -> str | None:
@@ -49,7 +42,7 @@ def main():
     app.setApplicationName("提词器")
     app.setApplicationDisplayName("提词器")
 
-    icon_path = _resolve_path("text.ico")
+    icon_path = resolve_path("text.ico")
     if os.path.exists(icon_path):
         app_icon = QIcon(icon_path)
         app.setWindowIcon(app_icon)

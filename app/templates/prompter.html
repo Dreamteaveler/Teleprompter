@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body {
+    background:#0d0d0d;
+    color:#f2f2f2;
+    width:100%;
+    font-size:__FS__px;
+    line-height:__LH__;
+    padding:__PT__px __PX__px __PB__px __PX__px;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.content p{margin:0.5em 0;}
+.content h1,.content h2,.content h3{margin:0.6em 0 0.3em;font-weight:700;}
+.content h1{font-size:1.4em;}
+.content h2{font-size:1.2em;}
+.content h3{font-size:1.05em;}
+.content sup{vertical-align:super;font-size:0.92em;}
+.content sub{vertical-align:sub;font-size:0.92em;}
+.content strong{font-weight:700;color:#FFD966;}
+.content em{font-style:italic;}
+.content blockquote{border-left:3px solid #DB9D16;margin:0.5em 0;padding:0.3em 1em;color:#bbb;}
+.content code{background:#1a1a1a;padding:2px 6px;border-radius:4px;font-family:monospace;}
+.content pre{background:#1a1a1a;padding:12px 16px;border-radius:6px;overflow-x:auto;}
+.content ul,.content ol{margin:0.4em 0;padding-left:1.5em;}
+.content li{margin:0.2em 0;}
+mjx-container{font-size:1.05em;}
+img{max-width:100%;height:auto;display:block;margin:4px 0;}
+table{border-collapse:collapse;width:100%;margin:8px 0;}
+td,th{border:1px solid #2e2e2e;padding:6px 10px;}
+#rl{position:fixed;left:2%;right:2%;height:__RLH__px;border:8px dashed rgba(219,157,22,1);border-radius:8px;background:transparent;pointer-events:auto;cursor:ns-resize;display:none;z-index:100;box-sizing:border-box;}
+</style>
+<script>
+MathJax = {
+    tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        processEscapes: true,
+        processEnvironments: true
+    },
+    options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    }
+};
+</script>
+<script id="MathJax-script" async src="__MATHJAX__"></script>
+</head>
+<body>
+<div class="content">__BODY__</div>
+<div id="rl"></div>
+<script>
+// ── 引导框拖拽 ──
+// window._readingLineTop：视口相对 Y（px），水平翻转不影响 Y 轴。
+// 16ms 同步定时器读取此值，×_mirror_scale 后推送到镜像。
+(function(){
+  var rl=document.getElementById('rl');
+  var dragging=false,startY=0,startTop=0;
+  window._readingLineTop = window.innerHeight / 3;
+  rl.addEventListener('mousedown',function(e){
+    dragging=true;startY=e.clientY;startTop=parseInt(rl.style.top)||(window.innerHeight/3);
+    rl.style.cursor='grabbing';e.preventDefault();
+  });
+  document.addEventListener('mousemove',function(e){
+    if(!dragging)return;
+    var newTop=Math.max(0,Math.min(window.innerHeight-rl.offsetHeight,startTop+e.clientY-startY));
+    rl.style.top=newTop+'px';
+    window._readingLineTop = newTop;
+  });
+  document.addEventListener('mouseup',function(){
+    if(dragging){
+      dragging=false;
+      rl.style.cursor='ns-resize';
+      window._readingLineTop = parseInt(rl.style.top)||(window.innerHeight/3);
+    }
+  });
+  window.getReadingLineTop = function(){
+    return window._readingLineTop || (window.innerHeight / 3);
+  };
+})();
+</script>
+<script>
+(function() {
+  function scaleFormulas() {
+    var content = document.querySelector('.content');
+    if (!content) return;
+    var maxWidth = content.getBoundingClientRect().width;
+    if (maxWidth <= 0) return;
+    document.querySelectorAll('mjx-container').forEach(function(mjx) {
+      mjx.style.fontSize = '';
+      var w = mjx.getBoundingClientRect().width;
+      if (mjx.getAttribute('display') === 'true') {
+        var innerMath = mjx.querySelector('mjx-math');
+        if (innerMath) w = innerMath.getBoundingClientRect().width;
+      }
+      if (w > maxWidth + 1) {
+        var cs = getComputedStyle(mjx);
+        var currentFs = parseFloat(cs.fontSize);
+        var parentFs = parseFloat(getComputedStyle(mjx.parentElement).fontSize);
+        var ratio = parentFs > 0 ? currentFs / parentFs : 1;
+        mjx.style.fontSize = (maxWidth / w * 100 * ratio).toFixed(1) + '%';
+      }
+    });
+  }
+
+  function init() {
+    if (window.MathJax && MathJax.startup && MathJax.startup.promise) {
+      MathJax.startup.promise.then(function() {
+        requestAnimationFrame(function() {
+          requestAnimationFrame(scaleFormulas);
+        });
+        window.addEventListener('resize', function() {
+          clearTimeout(window._mjxScaleTimer);
+          window._mjxScaleTimer = setTimeout(scaleFormulas, 200);
+        });
+      });
+    } else {
+      setTimeout(init, 100);
+    }
+  }
+
+  init();
+})();
+</script>
+</body></html>

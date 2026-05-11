@@ -8,6 +8,7 @@
 import sqlite3
 import os
 import sys
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -26,21 +27,24 @@ DB_PATH = os.path.join(DATA_DIR, "teleprompter.db")
 DOCS_DIR = os.path.join(DATA_DIR, "documents")
 
 
-def get_connection() -> sqlite3.Connection:
+@contextmanager
+def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.text_factory = str
     conn.execute("PRAGMA encoding = 'UTF-8'")
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def init_database():
     os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(DOCS_DIR, exist_ok=True)
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS manuscripts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,8 +63,6 @@ def init_database():
             )
         """)
         conn.commit()
-    finally:
-        conn.close()
 
 
 def now_iso() -> str:
@@ -71,102 +73,78 @@ def now_iso() -> str:
 
 
 def list_manuscripts() -> list[Manuscript]:
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         rows = conn.execute(
             "SELECT * FROM manuscripts ORDER BY updated_at DESC"
         ).fetchall()
         return [_row_to_manuscript(r) for r in rows]
-    finally:
-        conn.close()
 
 
 def get_manuscript(manuscript_id: int) -> Optional[Manuscript]:
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         row = conn.execute(
             "SELECT * FROM manuscripts WHERE id = ?", (manuscript_id,)
         ).fetchone()
         return _row_to_manuscript(row) if row else None
-    finally:
-        conn.close()
 
 
 def create_manuscript(title: str, content: str) -> Manuscript:
     now = now_iso()
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         cursor = conn.execute(
             "INSERT INTO manuscripts (title, content, created_at, updated_at) VALUES (?, ?, ?, ?)",
             (title, content, now, now),
         )
         conn.commit()
         return get_manuscript(cursor.lastrowid)
-    finally:
-        conn.close()
 
 
 def update_manuscript(manuscript_id: int, title: str, content: str) -> Optional[Manuscript]:
     now = now_iso()
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         conn.execute(
             "UPDATE manuscripts SET title = ?, content = ?, updated_at = ? WHERE id = ?",
             (title, content, now, manuscript_id),
         )
         conn.commit()
         return get_manuscript(manuscript_id)
-    finally:
-        conn.close()
 
 
 def delete_manuscript(manuscript_id: int) -> bool:
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         cursor = conn.execute("DELETE FROM manuscripts WHERE id = ?", (manuscript_id,))
         conn.commit()
         return cursor.rowcount > 0
-    finally:
-        conn.close()
 
 
 def search_manuscripts(query: str) -> list[Manuscript]:
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         pattern = f"%{query}%"
         rows = conn.execute(
             "SELECT * FROM manuscripts WHERE title LIKE ? OR content LIKE ? ORDER BY updated_at DESC",
             (pattern, pattern),
         ).fetchall()
         return [_row_to_manuscript(r) for r in rows]
-    finally:
-        conn.close()
 
 
 # ─── Settings ──────────────────────────────────────────────────────
 
 
 def get_setting(key: str, default: str = "") -> str:
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         row = conn.execute(
             "SELECT value FROM app_settings WHERE key = ?", (key,)
         ).fetchone()
         return row["value"] if row and row["value"] is not None else default
-    finally:
-        conn.close()
 
 
 def set_setting(key: str, value: str):
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         conn.execute(
             "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
             (key, value),
         )
         conn.commit()
-    finally:
-        conn.close()
 
 
 # ─── Helpers ───────────────────────────────────────────────────────

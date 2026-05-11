@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, QUrl, QSize, QTimer, QEvent, pyqtSignal
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 
+import re
 import sys
 import os
 
@@ -117,16 +118,9 @@ class MirrorWindow(QMainWindow):
         sx = -1 if self._hflip else 1
         sy = -1 if self._vflip else 1
         flip_tag = _FLIP_CSS.format(sx=sx, sy=sy)
-        html = html.replace("</head>", flip_tag + "</head>")
-        html = html.replace('<body>', '<body><div class="flip-wrapper">', 1)
-        html = html.replace('<div id="rl">', '</div><div id="rl">', 1)
-        if self._vflip:
-            import re
-            html = re.sub(
-                r'(body\s*\{[^}]*padding:)\s*(\d+)(px\s+)(\d+)(px\s+)(\d+)(px\s+)(\d+)(px)',
-                r'\1\6\3\4\5\2\7\8\9',
-                html
-            )
+        html = re.sub(r'(</head>)', flip_tag + r'\1', html)
+        html = re.sub(r'(<body[^>]*>)', r'\1<div class="flip-wrapper">', html)
+        html = re.sub(r'(<div\s+id="rl"[^>]*>)', r'</div>\1', html)
         self._view.setHtml(html, _mathjax_base_url())
 
     def _rebuild_with_scroll(self, scroll_y: float):

@@ -198,6 +198,7 @@ class PrompterPage(QWidget):
         self._mirror_scale: float = 1.0
         self._mirror_reading_line_y: float = 0.0
         self._auto_resume: bool = False
+        self._sync_pending: bool = False
 
         self._mirror_window: MirrorWindow | None = None
         self._is_mirror_open = False
@@ -275,7 +276,7 @@ class PrompterPage(QWidget):
 
         self._init_control_panel()
 
-    def _build_html(self, text: str, scale: float = 1.0) -> str:
+    def _build_html(self, text: str, scale: float = 1.0, vflip: bool = False) -> str:
         if not text or not text.strip():
             body = "<p style='color:#555;'>（空稿件）</p>"
         else:
@@ -296,12 +297,13 @@ class PrompterPage(QWidget):
             r'$\1$',
             body, flags=re.DOTALL,
         )
-        body = re.sub(r'<img[^>]*/?>', '', body, flags=re.DOTALL)
 
         fs = int(self._font_size * scale)
         lh = self._line_spacing
         pt = int(fs * 0.3)
         pb = int(fs * 1.5)
+        if vflip:
+            pt, pb = pb, pt
         px = int(fs * (0.5 + self._margin / 5.0))
         rlh = int(fs * self._line_spacing * 3)
 
@@ -356,6 +358,9 @@ class PrompterPage(QWidget):
         return html
 
     def _on_page_loaded(self, ok: bool):
+        if not ok:
+            self._page_ready = False
+            return
         self._page_ready = True
         self._refresh_scroll_height()
         self._update_reading_line()
@@ -428,11 +433,12 @@ class PrompterPage(QWidget):
     def _sync_mirror_content(self, keep_scroll: bool = False):
         if not self._mirror_window or not self._manuscript:
             return
-        main_w = max(100, self._view.width())
+        main_w = self._view.width()
         mirror_w = self._mirror_window.view_width()
-        self._mirror_scale = mirror_w / main_w
+        if main_w > 100 and mirror_w > 100:
+            self._mirror_scale = mirror_w / main_w
         self._mirror_reading_line_y = self._reading_line_y * self._mirror_scale
-        html = self._build_html(self._manuscript.content, scale=self._mirror_scale)
+        html = self._build_html(self._manuscript.content, scale=self._mirror_scale, vflip=self._vertical_flip)
         scroll_y = self._scroll_position * self._mirror_scale if keep_scroll else 0.0
         self._mirror_window.set_content(html, scroll_y, self._mirror_reading_line_y)
 
@@ -846,8 +852,9 @@ class PrompterPage(QWidget):
         if not self._is_mirror_open or not self._mirror_window:
             self._sync_timer.stop()
             return
-        if not self._page_ready:
+        if not self._page_ready or self._sync_pending:
             return
+        self._sync_pending = True
         self._view.page().runJavaScript(
             "[window.pageYOffset, window.getReadingLineTop ? window.getReadingLineTop() : (window.innerHeight/3), (document.getElementById('rl')||{}).offsetHeight||0]",
             lambda result: self._on_sync_position(result)
@@ -859,6 +866,7 @@ class PrompterPage(QWidget):
     #  rl_h × scale    → 引导框高度等比缩放
     def _on_sync_position(self, result):
         if result is None:
+            self._sync_pending = False
             return
         scroll_y = float(result[0]) if result[0] is not None else self._scroll_position
         rl_y = float(result[1]) if len(result) > 1 and result[1] is not None else 0
@@ -867,3 +875,4 @@ class PrompterPage(QWidget):
         if self._mirror_window and self._mirror_scale > 0:
             self._mirror_window.sync_scroll(scroll_y * self._mirror_scale)
             self._mirror_window.set_reading_line(rl_y * self._mirror_scale, rl_h * self._mirror_scale)
+        self._sync_pending = False

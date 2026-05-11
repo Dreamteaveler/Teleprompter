@@ -10,16 +10,19 @@ from PyQt6.QtWidgets import (
     QLineEdit, QScrollArea, QFrame, QSizePolicy, QMessageBox,
     QFileDialog,
 )
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont
+
+import re
 
 from app.database import list_manuscripts, search_manuscripts, delete_manuscript, create_manuscript
 from app.models import Manuscript
 from app.docx_importer import import_docx_file
+from app.image_utils import compress_images_in_html
 
 
 CARD_WIDTH = 240
-CARD_HEIGHT = 160
+CARD_HEIGHT = 175
 
 
 class ManuscriptCard(QFrame):
@@ -69,14 +72,15 @@ class ManuscriptCard(QFrame):
         title_label = QLabel(manuscript.title if manuscript.title else "未命名稿件")
         title_label.setStyleSheet("font-size: 14px; font-weight: 700; color: #f2f2f2;")
         title_label.setWordWrap(True)
-        title_label.setMaximumHeight(36)
+        title_label.setMaximumHeight(44)
         layout.addWidget(title_label)
 
         preview = manuscript.plain_text_preview(60)
         preview_label = QLabel(preview)
         preview_label.setObjectName("mutedLabel")
         preview_label.setWordWrap(True)
-        preview_label.setStyleSheet("color: #9e9e9e; font-size: 11px; line-height: 1.4;")
+        preview_label.setMinimumHeight(48)
+        preview_label.setStyleSheet("color: #9e9e9e; font-size: 11px;")
         layout.addWidget(preview_label, 1)
 
         footer = QHBoxLayout()
@@ -118,6 +122,9 @@ class HomePage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._manuscripts: list[Manuscript] = []
+        self._relayout_timer = QTimer(self)
+        self._relayout_timer.setSingleShot(True)
+        self._relayout_timer.timeout.connect(self._render_cards)
         self._init_ui()
         self._refresh()
 
@@ -193,28 +200,29 @@ class HomePage(QWidget):
         )
         if not filepath:
             return
-        reply = QMessageBox.information(
-            self, "提示",
-            "导入的文档中如包含图片，将不会被加载显示。",
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Ok,
-        )
-        if reply != QMessageBox.StandardButton.Ok:
-            return
         try:
             html_content, has_formulas = import_docx_file(filepath)
+            if not html_content:
+                QMessageBox.warning(self, "导入失败", "无法读取文档内容。")
+                return
             title = filepath.split("/")[-1].split("\\")[-1].replace(".docx", "")
-            if has_formulas:
+
+            has_images = bool(re.search(r'<img[^>]*>', html_content, re.IGNORECASE))
+            if has_formulas or has_images:
                 reply = QMessageBox.question(
-                    self, "检测到公式",
-                    "该文档含有公式，是否将其转换为 LaTeX 格式以正确渲染？",
+                    self, "转换提示",
+                    "您的内容包含图片或公式，需要进行转换以确保正确渲染。\n\n"
+                    "• 选择「是」：转换并创建稿件\n"
+                    "• 选择「否」：取消导入",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes,
                 )
-                if reply == QMessageBox.StandardButton.Yes:
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
+                if has_formulas:
                     html_content, _ = import_docx_file(filepath, formula_mode="latex")
-            import re
-            html_content = re.sub(r'<img[^>]*/?>', '', html_content, flags=re.DOTALL)
+
+            html_content = compress_images_in_html(html_content)
             manuscript = create_manuscript(title, html_content)
             self.navigate_to_editor.emit(manuscript)
         except Exception as e:
@@ -232,10 +240,16 @@ class HomePage(QWidget):
         self._render_cards()
 
     def _render_cards(self):
-        while self._cards_layout.count():
-            item = self._cards_layout.takeAt(0)
-            if item and item.widget():
-                item.widget().deleteLater()
+        old_widget = self._cards_widget
+        old_widget.hide()
+        self._scroll_layout.removeWidget(old_widget)
+        old_widget.deleteLater()
+
+        self._cards_widget = QWidget()
+        self._cards_layout = QVBoxLayout(self._cards_widget)
+        self._cards_layout.setSpacing(12)
+        self._cards_layout.setContentsMargins(0, 0, 0, 0)
+        self._scroll_layout.insertWidget(1, self._cards_widget)
 
         count = len(self._manuscripts)
         self._count_label.setText(f"全部稿件（共 {count} 条）")
@@ -262,7 +276,8 @@ class HomePage(QWidget):
 
         row_layout = None
         card_spacing = 12
-        available_width = self.width() - 80
+        win = self.window()
+        available_width = (win.width() if win else 1280) - 80
         if available_width <= 100:
             available_width = 1100
         row_width = 0
@@ -310,3 +325,8 @@ class HomePage(QWidget):
     def refresh(self):
         self._search_input.clear()
         self._refresh()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, '_relayout_timer'):
+            self._relayout_timer.start(150)

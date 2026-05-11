@@ -8,7 +8,8 @@
 from PyQt6.QtWidgets import (
     QMainWindow, QStackedWidget,
 )
-from PyQt6.QtCore import QSize
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QKeyEvent
 
 from app.database import get_manuscript
 from app.pages.home_page import HomePage
@@ -75,6 +76,19 @@ class MainWindow(QMainWindow):
     def _on_prompter_completed(self):
         self._stack.setCurrentIndex(self.PAGE_HOME)
         self._home.refresh()
+
+    def keyPressEvent(self, event: QKeyEvent):
+        key = event.key()
+        if key == Qt.Key.Key_F11:
+            if self.isFullScreen():
+                self.showNormal()
+            else:
+                self.showFullScreen()
+            return
+        if key == Qt.Key.Key_Escape and self.isFullScreen():
+            self.showNormal()
+            return
+        super().keyPressEvent(event)
 
     def resizeEvent(self, event):
         if self._stack.currentIndex() != self.PAGE_PROMPTER or self._resizing or self.isFullScreen():

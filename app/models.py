@@ -6,7 +6,7 @@
 # 本项目基于影视飓风提词器（Apache-2.0 许可）的源代码重新实现。
 #
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @dataclass
@@ -22,6 +22,8 @@ class Manuscript:
     def formatted_date(self) -> str:
         try:
             dt = datetime.fromisoformat(self.updated_at)
+            if dt.tzinfo is not None:
+                dt = dt.astimezone()
             return dt.strftime("%Y-%m-%d %H:%M")
         except (ValueError, TypeError):
             return ""

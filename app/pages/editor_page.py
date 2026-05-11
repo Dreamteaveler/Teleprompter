@@ -22,6 +22,7 @@ from app.database import create_manuscript, update_manuscript
 from app.models import Manuscript
 from app.docx_importer import import_docx_file
 from app.formula_editor import FormulaEditor
+from app.image_utils import compress_images_in_html
 
 FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72]
 FONT_FAMILIES = [
@@ -433,29 +434,29 @@ class EditorPage(QWidget):
         )
         if not filepath:
             return
-        reply = QMessageBox.information(
-            self, "提示",
-            "导入的文档中如包含图片，将不会被加载显示。",
-            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
-            QMessageBox.StandardButton.Ok,
-        )
-        if reply != QMessageBox.StandardButton.Ok:
-            return
         try:
             html_content, has_formulas = import_docx_file(filepath)
-            if has_formulas:
+            if not html_content:
+                QMessageBox.warning(self, "导入失败", "无法读取文档内容。")
+                return
+
+            has_images = bool(re.search(r'<img[^>]*>', html_content, re.IGNORECASE))
+            if has_formulas or has_images:
                 reply = QMessageBox.question(
-                    self, "检测到公式",
-                    "该文档含有公式，是否将其转换为 LaTeX 格式以正确渲染？",
+                    self, "转换提示",
+                    "您的内容包含图片或公式，需要进行转换以确保正确渲染。\n\n"
+                    "• 选择「是」：转换并载入编辑器\n"
+                    "• 选择「否」：取消导入",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes,
                 )
-                if reply == QMessageBox.StandardButton.Yes:
+                if reply != QMessageBox.StandardButton.Yes:
+                    return
+                if has_formulas:
                     html_content, _ = import_docx_file(filepath, formula_mode="latex")
-            if html_content:
-                html_content = self._strip_images(html_content)
-                self._content_edit.setHtml(html_content)
-                self._apply_chinese_formatting()
+
+            self._content_edit.setHtml(html_content)
+            self._apply_chinese_formatting()
             title = filepath.split("/")[-1].split("\\")[-1].replace(".docx", "")
             self._title_input.setText(title)
         except Exception as e:
@@ -482,7 +483,6 @@ class EditorPage(QWidget):
                 or "<table>" in content.lower() or "<img" in content.lower()
             )
             if is_html:
-                content = self._strip_images(content)
                 self._content_edit.setHtml(content)
             else:
                 self._content_edit.setPlainText(content)
@@ -504,7 +504,7 @@ class EditorPage(QWidget):
         body = re.sub(r'<head[^>]*>.*?</head>', '', body, flags=re.DOTALL)
         body = html_module.unescape(body.strip())
         body = self._convert_formula_images(body)
-        body = re.sub(r'<img[^>]*/?>', '', body, flags=re.DOTALL)
+        body = compress_images_in_html(body)
         return body
 
     @staticmethod
@@ -552,57 +552,52 @@ class EditorPage(QWidget):
         plain_text = mime.text() if has_text else ""
         html_content = mime.html() if has_html else ""
 
-        body_only = html_content
-        body_only = re.sub(r'<style[^>]*>.*?</style>', '', body_only, flags=re.DOTALL | re.IGNORECASE)
-        body_only = re.sub(r'<script[^>]*>.*?</script>', '', body_only, flags=re.DOTALL | re.IGNORECASE)
-        body_only = re.sub(r'<head[^>]*>.*?</head>', '', body_only, flags=re.DOTALL | re.IGNORECASE)
-        body_only = re.sub(r'<meta[^>]*>', '', body_only, flags=re.IGNORECASE)
-        body_only = re.sub(r'<link[^>]*>', '', body_only, flags=re.IGNORECASE)
-        body_only = re.sub(r'<xml[^>]*>.*?</xml>', '', body_only, flags=re.DOTALL | re.IGNORECASE)
-        body_only = re.sub(r'<!--\[if\s+gte\s+mso\s+9\].*?<!\[endif\]-->', '', body_only, flags=re.DOTALL | re.IGNORECASE)
+        has_images = bool(re.search(r'<img[^>]*>', html_content, re.IGNORECASE))
+        has_images = has_images or bool(re.search(r'data:image/', html_content))
 
         tex_in_text = bool(re.search(r'(?<!\$)\$(?!\$).+?(?<!\$)\$(?!\$)', plain_text))
         tex_in_text = tex_in_text or bool(re.search(r'\$\$[\s\S]*?\$\$', plain_text))
-        tex_in_html = bool(re.search(r'\$\$[\s\S]*?\$\$', body_only))
-        tex_in_html = tex_in_html or bool(re.search(r'(?<!\$)\$(?!\$).+?(?<!\$)\$(?!\$)', body_only))
-        mjx_in_html = bool(re.search(r'<mjx-container', body_only, re.IGNORECASE))
-        omml_in_html = bool(re.search(r'<m:oMath[>\s]|<m:oMathPara[>\s]', body_only, re.IGNORECASE))
+        tex_in_html = bool(re.search(r'\$\$[\s\S]*?\$\$', html_content))
+        tex_in_html = tex_in_html or bool(re.search(r'(?<!\$)\$(?!\$).+?(?<!\$)\$(?!\$)', html_content))
+        mjx_in_html = bool(re.search(r'<mjx-container', html_content, re.IGNORECASE))
+        omml_in_html = bool(re.search(r'<m:oMath[>\s]|<m:oMathPara[>\s]', html_content, re.IGNORECASE))
 
-        unicode_count = 0
-        _UMAP = {
-            'Α': 1, 'Β': 1, 'Γ': 1, 'Δ': 1, 'Ε': 1, 'Ζ': 1, 'Η': 1, 'Θ': 1,
-            'Ι': 1, 'Κ': 1, 'Λ': 1, 'Μ': 1, 'Ν': 1, 'Ξ': 1, 'Ο': 1, 'Π': 1,
-            'Ρ': 1, 'Σ': 1, 'Τ': 1, 'Υ': 1, 'Φ': 1, 'Χ': 1, 'Ψ': 1, 'Ω': 1,
-            'α': 1, 'β': 1, 'γ': 1, 'δ': 1, 'ε': 1, 'ζ': 1, 'η': 1, 'θ': 1,
-            'ι': 1, 'κ': 1, 'λ': 1, 'μ': 1, 'ν': 1, 'ξ': 1, 'π': 1, 'ρ': 1,
-            'σ': 1, 'τ': 1, 'υ': 1, 'φ': 1, 'χ': 1, 'ψ': 1, 'ω': 1,
-            '→': 1, '←': 1, '⇒': 1, '⇐': 1, '⇌': 1, '·': 1, '×': 1, '÷': 1,
-            '±': 1, '∫': 1, '∞': 1, '∂': 1, '∇': 1, '≤': 1, '≥': 1, '≠': 1,
-            '≈': 1, '≡': 1, '∈': 1, '⊂': 1, '∪': 1, '∩': 1, '∀': 1, '∃': 1,
-            '⊕': 1, '⊗': 1, '∑': 1, '∏': 1,
-            '²': 1, '³': 1, '₁': 1, '₂': 1, '₃': 1, '°': 1,
-        }
+        unicode_math = False
+        count = 0
+        _MATH_RANGES = [
+            (0x0370, 0x03FF), (0x1F00, 0x1FFF),
+            (0x2200, 0x22FF), (0x2A00, 0x2AFF),
+            (0x27C0, 0x27EF), (0x2980, 0x29FF),
+            (0x2070, 0x209F), (0x00B0, 0x00B0),
+            (0x00B1, 0x00B1), (0x00D7, 0x00D7),
+            (0x00F7, 0x00F7), (0x00B7, 0x00B7),
+            (0x2190, 0x21FF), (0x2300, 0x23FF),
+        ]
         for ch in plain_text:
-            if ch in _UMAP:
-                unicode_count += 1
-                if unicode_count >= 3:
+            cp = ord(ch)
+            if any(lo <= cp <= hi for lo, hi in _MATH_RANGES):
+                count += 1
+                if count >= 3:
+                    unicode_math = True
                     break
-        unicode_math_in_text = unicode_count >= 3
+            elif cp < 128:
+                count = 0
 
-        has_formula = tex_in_text or tex_in_html or mjx_in_html or omml_in_html or unicode_math_in_text
-        if not has_formula:
+        has_formula = tex_in_text or tex_in_html or mjx_in_html or omml_in_html or unicode_math
+        if not has_images and not has_formula:
             return False
 
+        msg = "您的内容包含图片或公式，需要进行转换以确保正确渲染。"
         reply = QMessageBox.question(
-            self, "检测到公式",
-            "检测到文本中包含公式。请使用 Word 导入功能以确保公式正确渲染。\n\n"
-            "• 选择「是」：自动打开 Word 导入界面\n"
-            "• 选择「否」：跳过，以纯文本形式粘贴",
+            self, "转换提示",
+            msg + "\n\n"
+            "• 选择「是」：转换并粘贴到编辑器\n"
+            "• 选择「否」：取消粘贴",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            QTimer.singleShot(100, self._import_word)
+            return False
         return True
 
     def _on_cancel(self):
@@ -614,34 +609,116 @@ class EditorPage(QWidget):
         if not text:
             return
 
-        ranges = []
+        def _is_cjk(ch):
+            cp = ord(ch)
+            return (0x4E00 <= cp <= 0x9FFF or 0x3400 <= cp <= 0x4DBF or
+                    0xF900 <= cp <= 0xFAFF or 0x3000 <= cp <= 0x303F or
+                    0xFF00 <= cp <= 0xFFEF)
+
+        def _is_latin(ch):
+            cp = ord(ch)
+            return (0x41 <= cp <= 0x5A or 0x61 <= cp <= 0x7A or
+                    0xC0 <= cp <= 0x24F)
+
+        formula_ranges = []
+        i = 0
+        while i < len(text):
+            if i + 1 < len(text) and text[i:i + 2] == '$$':
+                start = i
+                i += 2
+                while i + 1 < len(text):
+                    if text[i:i + 2] == '$$':
+                        i += 2
+                        formula_ranges.append((start, i))
+                        break
+                    i += 1
+                else:
+                    i = start + 1
+            elif text[i] == '$':
+                start = i
+                i += 1
+                while i < len(text):
+                    if text[i] == '$':
+                        i += 1
+                        formula_ranges.append((start, i))
+                        break
+                    i += 1
+                else:
+                    i = start + 1
+            else:
+                i += 1
+
+        is_in_formula = [False] * len(text)
+        for s, e in formula_ranges:
+            for j in range(s, e):
+                is_in_formula[j] = True
+
+        cjk_ranges = []
+        latin_ranges = []
+        current_type = None
         start = None
+
         for i, ch in enumerate(text):
-            if '\u4e00' <= ch <= '\u9fff' or '\u3400' <= ch <= '\u4dbf' or '\uf900' <= ch <= '\ufaff':
-                if start is None:
+            if is_in_formula[i]:
+                if start is not None:
+                    if current_type == "cjk":
+                        cjk_ranges.append((start, i))
+                    elif current_type == "latin":
+                        latin_ranges.append((start, i))
+                    start = None
+                    current_type = None
+                continue
+
+            if _is_cjk(ch):
+                if current_type != "cjk":
+                    if start is not None and current_type == "latin":
+                        latin_ranges.append((start, i))
                     start = i
+                    current_type = "cjk"
+            elif _is_latin(ch):
+                if current_type != "latin":
+                    if start is not None and current_type == "cjk":
+                        cjk_ranges.append((start, i))
+                    start = i
+                    current_type = "latin"
             else:
                 if start is not None:
-                    ranges.append((start, i))
+                    if current_type == "cjk":
+                        cjk_ranges.append((start, i))
+                    elif current_type == "latin":
+                        latin_ranges.append((start, i))
                     start = None
-        if start is not None:
-            ranges.append((start, len(text)))
+                    current_type = None
 
-        if not ranges:
+        if start is not None:
+            if current_type == "cjk":
+                cjk_ranges.append((start, len(text)))
+            elif current_type == "latin":
+                latin_ranges.append((start, len(text)))
+
+        if not cjk_ranges and not latin_ranges:
             return
 
         saved_cursor = self._content_edit.textCursor()
         saved_pos = saved_cursor.position()
-
         cursor = QTextCursor(doc)
-        fmt = QTextCharFormat()
-        fmt.setFontFamilies(["黑体"])
-        fmt.setFontWeight(QFont.Weight.Bold)
 
-        for start_pos, end_pos in ranges:
+        cjk_fmt = QTextCharFormat()
+        cjk_fmt.setFontFamilies(["黑体"])
+        cjk_fmt.setFontWeight(QFont.Weight.Bold)
+
+        latin_fmt = QTextCharFormat()
+        latin_fmt.setFontFamilies(["Times New Roman"])
+
+        for start_pos, end_pos in cjk_ranges:
             cursor.setPosition(start_pos)
             cursor.setPosition(end_pos, QTextCursor.MoveMode.KeepAnchor)
-            cursor.mergeCharFormat(fmt)
+            cursor.mergeCharFormat(cjk_fmt)
+
+        for start_pos, end_pos in latin_ranges:
+            cursor.setPosition(start_pos)
+            cursor.setPosition(end_pos, QTextCursor.MoveMode.KeepAnchor)
+            cursor.mergeCharFormat(latin_fmt)
 
         saved_cursor.setPosition(saved_pos)
         self._content_edit.setTextCursor(saved_cursor)

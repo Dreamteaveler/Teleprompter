@@ -7,7 +7,7 @@
 # 本项目基于影视飓风提词器（Apache-2.0 许可）的源代码重新实现。
 #
 
-__version__ = "1.05"
+__version__ = "1.06"
 
 import sys
 import io

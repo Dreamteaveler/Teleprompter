@@ -211,9 +211,7 @@ class HomePage(QWidget):
             if has_formulas or has_images:
                 reply = QMessageBox.question(
                     self, "转换提示",
-                    "您的内容包含图片或公式，需要进行转换以确保正确渲染。\n\n"
-                    "• 选择「是」：转换并创建稿件\n"
-                    "• 选择「否」：取消导入",
+                    "检测到图片或公式，是否转换格式以保证正确渲染？",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes,
                 )

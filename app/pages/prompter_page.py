@@ -410,6 +410,13 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
     def _on_back(self):
         self._pause()
         self._close_mirror()
+        # 离开提词器前先退出全屏，避免其他页面也被全屏
+        if self._is_fullscreen:
+            win = self.window()
+            win._resizing = True
+            win.showNormal()
+            self._is_fullscreen = False
+            QTimer.singleShot(400, lambda: setattr(win, '_resizing', False))
         self.back_to_home.emit()
 
     def showEvent(self, event):

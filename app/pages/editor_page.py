@@ -7,12 +7,12 @@
 #
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QTextEdit, QComboBox, QToolButton,
-    QFileDialog, QMessageBox, QColorDialog, QDialog,
+    QLineEdit, QTextEdit,
+    QFileDialog, QMessageBox,
 )
-from PyQt6.QtCore import Qt, pyqtSignal, QEvent, QTimer
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import (
-    QTextCharFormat, QFont, QColor, QBrush, QTextCursor,
+    QTextCharFormat, QFont, QTextCursor,
 )
 
 import re
@@ -21,16 +21,7 @@ import html as html_module
 from app.database import create_manuscript, update_manuscript
 from app.models import Manuscript
 from app.docx_importer import import_docx_file
-from app.formula_editor import FormulaEditor
 from app.image_utils import compress_images_in_html
-
-FONT_SIZES = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72]
-FONT_FAMILIES = [
-    "微软雅黑", "宋体", "黑体", "仿宋", "楷体",
-    "Arial", "Arial Black", "Comic Sans MS",
-    "Courier New", "Georgia", "Impact",
-    "Times New Roman", "Trebuchet MS", "Verdana",
-]
 
 
 class FormulaAwareTextEdit(QTextEdit):
@@ -53,12 +44,6 @@ class EditorPage(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._editing_id: int | None = None
-        self._color_click_timer = QTimer(self)
-        self._color_click_timer.setSingleShot(True)
-        self._color_click_timer.timeout.connect(self._pick_font_color)
-        self._bg_click_timer = QTimer(self)
-        self._bg_click_timer.setSingleShot(True)
-        self._bg_click_timer.timeout.connect(self._pick_bg_color)
         self._init_ui()
 
     def _init_ui(self):
@@ -93,340 +78,18 @@ class EditorPage(QWidget):
 
         layout.addLayout(header)
 
-        tb = QHBoxLayout()
-        tb.setSpacing(4)
-
-        self._font_family = QComboBox()
-        self._font_family.addItems(FONT_FAMILIES)
-        self._font_family.setCurrentText("微软雅黑")
-        self._font_family.setFixedWidth(140)
-        self._font_family.currentTextChanged.connect(self._on_font_family)
-        tb.addWidget(self._font_family)
-
-        self._font_size = QComboBox()
-        self._font_size.addItems([str(s) for s in FONT_SIZES])
-        self._font_size.setCurrentText("18")
-        self._font_size.setFixedWidth(60)
-        self._font_size.currentTextChanged.connect(self._on_font_size)
-        tb.addWidget(self._font_size)
-
-        tb.addSpacing(8)
-
-        self._bold_btn = QToolButton()
-        self._bold_btn.setText("B")
-        self._bold_btn.setCheckable(True)
-        self._bold_btn.setFixedSize(32, 32)
-        self._bold_btn.setObjectName("toolbarBtn")
-        bold_font = self._bold_btn.font()
-        bold_font.setBold(True)
-        bold_font.setPointSize(12)
-        self._bold_btn.setFont(bold_font)
-        self._bold_btn.setToolTip("粗体 (Ctrl+B)")
-        self._bold_btn.clicked.connect(self._toggle_bold)
-        tb.addWidget(self._bold_btn)
-
-        self._italic_btn = QToolButton()
-        self._italic_btn.setText("I")
-        self._italic_btn.setCheckable(True)
-        self._italic_btn.setFixedSize(32, 32)
-        self._italic_btn.setObjectName("toolbarBtn")
-        italic_font = self._italic_btn.font()
-        italic_font.setItalic(True)
-        italic_font.setPointSize(12)
-        self._italic_btn.setFont(italic_font)
-        self._italic_btn.setToolTip("斜体 (Ctrl+I)")
-        self._italic_btn.clicked.connect(self._toggle_italic)
-        tb.addWidget(self._italic_btn)
-
-        self._underline_btn = QToolButton()
-        self._underline_btn.setText("U")
-        self._underline_btn.setCheckable(True)
-        self._underline_btn.setFixedSize(32, 32)
-        self._underline_btn.setObjectName("toolbarBtn")
-        u_font = self._underline_btn.font()
-        u_font.setUnderline(True)
-        u_font.setPointSize(12)
-        self._underline_btn.setFont(u_font)
-        self._underline_btn.setToolTip("下划线 (Ctrl+U)")
-        self._underline_btn.clicked.connect(self._toggle_underline)
-        tb.addWidget(self._underline_btn)
-
-        tb.addSpacing(4)
-
-        self._sup_btn = QToolButton()
-        self._sup_btn.setText("X²")
-        self._sup_btn.setCheckable(True)
-        self._sup_btn.setFixedSize(32, 32)
-        self._sup_btn.setObjectName("toolbarBtn")
-        sup_font = self._sup_btn.font()
-        sup_font.setPointSize(9)
-        self._sup_btn.setFont(sup_font)
-        self._sup_btn.setToolTip("上标")
-        self._sup_btn.clicked.connect(self._toggle_superscript)
-        tb.addWidget(self._sup_btn)
-
-        self._sub_btn = QToolButton()
-        self._sub_btn.setText("X₂")
-        self._sub_btn.setCheckable(True)
-        self._sub_btn.setFixedSize(48, 32)
-        self._sub_btn.setObjectName("toolbarBtn")
-        sub_font = self._sub_btn.font()
-        sub_font.setPointSize(9)
-        self._sub_btn.setFont(sub_font)
-        self._sub_btn.setToolTip("下标")
-        self._sub_btn.clicked.connect(self._toggle_subscript)
-        tb.addWidget(self._sub_btn)
-
-        tb.addSpacing(8)
-
-        self._color_btn = QToolButton()
-        self._color_btn.setText("A")
-        self._color_btn.setFixedSize(32, 32)
-        self._color_btn.setObjectName("colorBtn")
-        self._color_btn.setToolTip("字体颜色（双击设为黑色）")
-        self._color_btn.setAutoRepeat(False)
-        self._color_btn.installEventFilter(self)
-        tb.addWidget(self._color_btn)
-
-        self._bg_color_btn = QToolButton()
-        self._bg_color_btn.setText("背景")
-        self._bg_color_btn.setFixedSize(36, 32)
-        self._bg_color_btn.setObjectName("colorBtn")
-        self._bg_color_btn.setToolTip("底色（双击清除底色）")
-        self._bg_color_btn.setAutoRepeat(False)
-        self._bg_color_btn.installEventFilter(self)
-        tb.addWidget(self._bg_color_btn)
-
-        self._clear_color_btn = QToolButton()
-        self._clear_color_btn.setText("无底纹")
-        self._clear_color_btn.setFixedSize(48, 32)
-        self._clear_color_btn.setObjectName("toolbarBtn")
-        self._clear_color_btn.setToolTip("清除底色")
-        self._clear_color_btn.clicked.connect(self._clear_bg)
-        tb.addWidget(self._clear_color_btn)
-
-        tb.addSpacing(8)
-
-        self._formula_btn = QToolButton()
-        self._formula_btn.setText("Σ")
-        self._formula_btn.setFixedSize(36, 32)
-        self._formula_btn.setObjectName("toolbarBtn")
-        f_font = self._formula_btn.font()
-        f_font.setPointSize(14)
-        self._formula_btn.setFont(f_font)
-        self._formula_btn.setToolTip("插入公式")
-        self._formula_btn.clicked.connect(self._insert_formula)
-        tb.addWidget(self._formula_btn)
-
-        tb.addStretch()
-        layout.addLayout(tb)
-
         self._content_edit = FormulaAwareTextEdit()
         self._content_edit.setObjectName("contentEdit")
         self._content_edit.setPlaceholderText(
             "在此输入您的提词稿件内容...\n\n"
             "• 支持 Ctrl+V 粘贴图片\n"
             "• 支持复制表格、公式截图等富文本内容\n"
-            "• 使用上方工具栏设置字体样式"
+            "• 中文字体自动应用黑体加粗，西文自动应用 Times New Roman"
         )
         self._content_edit.setAcceptRichText(True)
-        self._content_edit.cursorPositionChanged.connect(self._sync_toolbar)
         self._content_edit.formula_paste_handler = self._handle_formula_paste_mime
         self._content_edit.post_paste_handler = self._apply_chinese_formatting
         layout.addWidget(self._content_edit, 1)
-
-    def _on_font_family(self, family: str):
-        if not family:
-            return
-        cursor = self._content_edit.textCursor()
-        if cursor.hasSelection():
-            fmt = QTextCharFormat()
-            fmt.setFontFamilies([family])
-            cursor.mergeCharFormat(fmt)
-            self._content_edit.setTextCursor(cursor)
-        else:
-            default_fmt = self._content_edit.currentCharFormat()
-            default_fmt.setFontFamilies([family])
-            self._content_edit.setCurrentCharFormat(default_fmt)
-
-    def _on_font_size(self, size_str: str):
-        if not size_str:
-            return
-        size = int(size_str)
-        cursor = self._content_edit.textCursor()
-        if cursor.hasSelection():
-            fmt = QTextCharFormat()
-            fmt.setFontPointSize(size)
-            cursor.mergeCharFormat(fmt)
-            self._content_edit.setTextCursor(cursor)
-        else:
-            default_fmt = self._content_edit.currentCharFormat()
-            default_fmt.setFontPointSize(size)
-            self._content_edit.setCurrentCharFormat(default_fmt)
-
-    def _toggle_bold(self):
-        cursor = self._content_edit.textCursor()
-        fmt = QTextCharFormat()
-        fmt.setFontWeight(
-            QFont.Weight.Bold if self._bold_btn.isChecked() else QFont.Weight.Normal
-        )
-        cursor.mergeCharFormat(fmt)
-        self._content_edit.setTextCursor(cursor)
-        self._content_edit.setFocus()
-
-    def _toggle_italic(self):
-        cursor = self._content_edit.textCursor()
-        fmt = QTextCharFormat()
-        fmt.setFontItalic(self._italic_btn.isChecked())
-        cursor.mergeCharFormat(fmt)
-        self._content_edit.setTextCursor(cursor)
-        self._content_edit.setFocus()
-
-    def _toggle_underline(self):
-        cursor = self._content_edit.textCursor()
-        fmt = QTextCharFormat()
-        fmt.setFontUnderline(self._underline_btn.isChecked())
-        cursor.mergeCharFormat(fmt)
-        self._content_edit.setTextCursor(cursor)
-        self._content_edit.setFocus()
-
-    def _toggle_superscript(self):
-        cursor = self._content_edit.textCursor()
-        fmt = QTextCharFormat()
-        if self._sup_btn.isChecked():
-            fmt.setVerticalAlignment(QTextCharFormat.VerticalAlignment.AlignSuperScript)
-        else:
-            fmt.setVerticalAlignment(QTextCharFormat.VerticalAlignment.AlignNormal)
-        cursor.mergeCharFormat(fmt)
-        self._content_edit.setTextCursor(cursor)
-        if self._sup_btn.isChecked():
-            self._sub_btn.setChecked(False)
-        self._content_edit.setFocus()
-
-    def _toggle_subscript(self):
-        cursor = self._content_edit.textCursor()
-        fmt = QTextCharFormat()
-        if self._sub_btn.isChecked():
-            fmt.setVerticalAlignment(QTextCharFormat.VerticalAlignment.AlignSubScript)
-        else:
-            fmt.setVerticalAlignment(QTextCharFormat.VerticalAlignment.AlignNormal)
-        cursor.mergeCharFormat(fmt)
-        self._content_edit.setTextCursor(cursor)
-        if self._sub_btn.isChecked():
-            self._sup_btn.setChecked(False)
-        self._content_edit.setFocus()
-
-    def _pick_font_color(self):
-        cursor = self._content_edit.textCursor()
-        current = self._content_edit.currentCharFormat().foreground().color()
-        color = QColorDialog.getColor(current, self, "选择字体颜色")
-        if color.isValid():
-            fmt = QTextCharFormat()
-            fmt.setForeground(color)
-            if cursor.hasSelection():
-                cursor.mergeCharFormat(fmt)
-            else:
-                self._content_edit.setCurrentCharFormat(fmt)
-            self._color_btn.setStyleSheet(
-                f"color: {color.name()}; border-bottom: 2px solid {color.name()};"
-            )
-        self._content_edit.setFocus()
-
-    def _pick_bg_color(self):
-        cursor = self._content_edit.textCursor()
-        current = self._content_edit.currentCharFormat().background().color()
-        color = QColorDialog.getColor(current, self, "选择底色")
-        if color.isValid():
-            fmt = QTextCharFormat()
-            fmt.setBackground(color)
-            if cursor.hasSelection():
-                cursor.mergeCharFormat(fmt)
-            else:
-                self._content_edit.setCurrentCharFormat(fmt)
-            self._bg_color_btn.setStyleSheet(
-                f"background-color: {color.name()}; color: #fff;"
-            )
-        self._content_edit.setFocus()
-
-    def _clear_bg(self):
-        cursor = self._content_edit.textCursor()
-        fmt = QTextCharFormat()
-        fmt.setBackground(QBrush(Qt.BrushStyle.NoBrush))
-        if cursor.hasSelection():
-            cursor.mergeCharFormat(fmt)
-        else:
-            self._content_edit.setCurrentCharFormat(fmt)
-        self._bg_color_btn.setStyleSheet("")
-        self._content_edit.setFocus()
-
-    def _set_foreground_black(self):
-        cursor = self._content_edit.textCursor()
-        fmt = QTextCharFormat()
-        fmt.setForeground(QColor(0, 0, 0))
-        if cursor.hasSelection():
-            cursor.mergeCharFormat(fmt)
-        else:
-            self._content_edit.setCurrentCharFormat(fmt)
-        self._color_btn.setStyleSheet("")
-        self._content_edit.setFocus()
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Type.MouseButtonRelease and event.button() == Qt.MouseButton.LeftButton:
-            if obj is self._color_btn:
-                self._color_click_timer.start(300)
-                return True
-            if obj is self._bg_color_btn:
-                self._bg_click_timer.start(300)
-                return True
-        elif event.type() == QEvent.Type.MouseButtonDblClick:
-            if obj is self._color_btn:
-                self._color_click_timer.stop()
-                self._set_foreground_black()
-                return True
-            if obj is self._bg_color_btn:
-                self._bg_click_timer.stop()
-                self._clear_bg()
-                return True
-        return super().eventFilter(obj, event)
-
-    def _sync_toolbar(self):
-        fmt = self._content_edit.currentCharFormat()
-        self._bold_btn.setChecked(fmt.fontWeight() == QFont.Weight.Bold)
-        self._italic_btn.setChecked(fmt.fontItalic())
-        self._underline_btn.setChecked(fmt.fontUnderline())
-        align = fmt.verticalAlignment()
-        self._sup_btn.setChecked(align == QTextCharFormat.VerticalAlignment.AlignSuperScript)
-        self._sub_btn.setChecked(align == QTextCharFormat.VerticalAlignment.AlignSubScript)
-        families = fmt.fontFamilies()
-        if families:
-            family = families[0]
-            idx = self._font_family.findText(family)
-            if idx >= 0:
-                self._font_family.blockSignals(True)
-                self._font_family.setCurrentIndex(idx)
-                self._font_family.blockSignals(False)
-        pt = fmt.fontPointSize()
-        if pt > 0:
-            size_str = str(int(pt))
-            idx = self._font_size.findText(size_str)
-            if idx >= 0:
-                self._font_size.blockSignals(True)
-                self._font_size.setCurrentIndex(idx)
-                self._font_size.blockSignals(False)
-        fg = fmt.foreground().color()
-        if fg.isValid() and fg != QColor(0, 0, 0):
-            self._color_btn.setStyleSheet(
-                f"color: {fg.name()}; border-bottom: 2px solid {fg.name()};"
-            )
-        else:
-            self._color_btn.setStyleSheet("")
-        bg = fmt.background().color()
-        if bg.isValid():
-            self._bg_color_btn.setStyleSheet(
-                f"background-color: {bg.name()}; color: #fff;"
-            )
-        else:
-            self._bg_color_btn.setStyleSheet("")
 
     def _import_word(self):
         filepath, _ = QFileDialog.getOpenFileName(
@@ -444,9 +107,7 @@ class EditorPage(QWidget):
             if has_formulas or has_images:
                 reply = QMessageBox.question(
                     self, "转换提示",
-                    "您的内容包含图片或公式，需要进行转换以确保正确渲染。\n\n"
-                    "• 选择「是」：转换并载入编辑器\n"
-                    "• 选择「否」：取消导入",
+                    "检测到图片或公式，是否转换格式以保证正确渲染？",
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes,
                 )
@@ -461,16 +122,6 @@ class EditorPage(QWidget):
             self._title_input.setText(title)
         except Exception as e:
             QMessageBox.warning(self, "导入失败", f"无法导入 Word 文档：\n{e}")
-
-    def _insert_formula(self):
-        dialog = FormulaEditor(self)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            latex = dialog.get_result()
-            if latex:
-                formula_text = FormulaEditor.wrap_formula(latex)
-                cursor = self._content_edit.textCursor()
-                cursor.insertText(formula_text)
-                self._content_edit.setFocus()
 
     def load_manuscript(self, manuscript: Manuscript | None):
         self._editing_id = manuscript.id if manuscript else None
@@ -492,6 +143,24 @@ class EditorPage(QWidget):
             self._content_edit.clear()
         self._content_edit.setFocus()
 
+    def _save(self):
+        title = self._title_input.text().strip()
+        content = self._content_edit.toHtml().strip()
+        content = self._normalize_html_content(content)
+        if not title:
+            self._title_input.setFocus()
+            return
+        try:
+            if self._editing_id:
+                update_manuscript(self._editing_id, title, content)
+                saved_id = self._editing_id
+            else:
+                ms = create_manuscript(title, content)
+                saved_id = ms.id
+            self.saved.emit(saved_id)
+        except Exception as e:
+            QMessageBox.warning(self, "保存失败", f"无法保存稿件：\n{e}")
+
     def _normalize_html_content(self, html: str) -> str:
         body_match = re.search(r'<body[^>]*>(.*?)</body>', html, re.DOTALL)
         if body_match:
@@ -503,9 +172,33 @@ class EditorPage(QWidget):
         body = re.sub(r'</html>', '', body, flags=re.DOTALL)
         body = re.sub(r'<head[^>]*>.*?</head>', '', body, flags=re.DOTALL)
         body = html_module.unescape(body.strip())
+        body = self._clean_html_noise(body)
         body = self._convert_formula_images(body)
         body = compress_images_in_html(body)
         return body
+
+    @staticmethod
+    def _clean_html_noise(html: str) -> str:
+        """清除 Qt QTextEdit 产生的冗余样式，不动 span 标签。"""
+        html = re.sub(r'<meta[^>]*>', '', html, flags=re.IGNORECASE)
+        html = re.sub(r'<style[^>]*>.*?</style>', '', html, flags=re.DOTALL | re.IGNORECASE)
+
+        def _clean_attrs(attrs):
+            attrs = re.sub(r'margin-top\s*:\s*\d+px\s*;?', '', attrs)
+            attrs = re.sub(r'margin-bottom\s*:\s*\d+px\s*;?', '', attrs)
+            attrs = re.sub(r'margin-left\s*:\s*\d+px\s*;?', '', attrs)
+            attrs = re.sub(r'margin-right\s*:\s*\d+px\s*;?', '', attrs)
+            attrs = re.sub(r'-qt-block-indent\s*:\s*\d+\s*;?', '', attrs)
+            attrs = re.sub(r'text-indent\s*:\s*\d+px\s*;?', '', attrs)
+            attrs = re.sub(r'white-space\s*:\s*pre-wrap\s*;?', '', attrs)
+            attrs = re.sub(r'\s*style\s*=\s*"\s*"', '', attrs)
+            attrs = re.sub(r"\s*style\s*=\s*'\s*'", '', attrs)
+            return attrs
+
+        html = re.sub(r'<p([^>]*)>', lambda m: '<p' + _clean_attrs(m.group(1)) + '>', html, flags=re.IGNORECASE)
+        html = re.sub(r'<li([^>]*)>', lambda m: '<li' + _clean_attrs(m.group(1)) + '>', html, flags=re.IGNORECASE)
+        html = re.sub(r'\n{3,}', '\n\n', html)
+        return html
 
     @staticmethod
     def _convert_formula_images(html: str) -> str:
@@ -524,24 +217,6 @@ class EditorPage(QWidget):
     def _strip_images(self, html: str) -> str:
         html = self._convert_formula_images(html)
         return re.sub(r'<img[^>]*/?>', '', html, flags=re.DOTALL)
-
-    def _save(self):
-        title = self._title_input.text().strip()
-        content = self._content_edit.toHtml().strip()
-        content = self._normalize_html_content(content)
-        if not title:
-            self._title_input.setFocus()
-            return
-        try:
-            if self._editing_id:
-                update_manuscript(self._editing_id, title, content)
-                saved_id = self._editing_id
-            else:
-                ms = create_manuscript(title, content)
-                saved_id = ms.id
-            self.saved.emit(saved_id)
-        except Exception as e:
-            QMessageBox.warning(self, "保存失败", f"无法保存稿件：\n{e}")
 
     def _handle_formula_paste_mime(self, mime) -> bool:
         if not mime:
@@ -587,12 +262,10 @@ class EditorPage(QWidget):
         if not has_images and not has_formula:
             return False
 
-        msg = "您的内容包含图片或公式，需要进行转换以确保正确渲染。"
+        msg = "检测到图片或公式，是否转换格式以保证正确渲染？"
         reply = QMessageBox.question(
             self, "转换提示",
-            msg + "\n\n"
-            "• 选择「是」：转换并粘贴到编辑器\n"
-            "• 选择「否」：取消粘贴",
+            msg,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes,
         )

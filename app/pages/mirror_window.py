@@ -45,6 +45,7 @@ class MirrorWindow(QMainWindow):
         self._content_html: str = ""
         self._hflip: bool = True
         self._vflip: bool = False
+        self._reading_line_visible: bool = True
 
         self._view = QWebEngineView()
         self._view.setStyleSheet("background-color: #0d0d0d; border: none;")
@@ -94,14 +95,22 @@ class MirrorWindow(QMainWindow):
     #  垂直模式：rl.style.top = innerHeight - y - h（内容翻转后对齐）
     def set_reading_line(self, y: float, h: float = 0):
         self._pending_rl_y = y
+        display = "block" if self._reading_line_visible else "none"
         if self._vflip:
-            js = 'var rl=document.getElementById("rl");if(rl){rl.style.top=(window.innerHeight - ' + str(y) + ' - ' + str(h) + ')+"px";rl.style.display="block";'
+            js = 'var rl=document.getElementById("rl");if(rl){rl.style.top=(window.innerHeight - ' + str(y) + ' - ' + str(h) + ')+"px";rl.style.display="' + display + '";'
         else:
-            js = 'var rl=document.getElementById("rl");if(rl){rl.style.top="' + str(y) + 'px";rl.style.display="block";'
+            js = 'var rl=document.getElementById("rl");if(rl){rl.style.top="' + str(y) + 'px";rl.style.display="' + display + '";'
         if h > 0:
             js += 'rl.style.height="' + str(h) + 'px";'
         js += '}'
         self._view.page().runJavaScript(js)
+
+    def set_reading_line_visibility(self, visible: bool):
+        self._reading_line_visible = visible
+        display = "block" if visible else "none"
+        self._view.page().runJavaScript(
+            'var rl=document.getElementById("rl");if(rl){rl.style.display="' + display + '";}'
+        )
 
     def _load_html(self):
         html = self._content_html

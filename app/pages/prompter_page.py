@@ -99,6 +99,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._margin = int(get_setting("horizontal_margin", "5"))
         self._horizontal_flip = get_setting("horizontal_flip", "true") == "true"
         self._vertical_flip = get_setting("vertical_flip", "false") == "true"
+        self._reading_line_visible = get_setting("reading_line_visible", "true") == "true"
 
     def _save_settings(self):
         set_setting("font_size", str(self._font_size))
@@ -108,6 +109,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         set_setting("horizontal_margin", str(self._margin))
         set_setting("horizontal_flip", "true" if self._horizontal_flip else "false")
         set_setting("vertical_flip", "true" if self._vertical_flip else "false")
+        set_setting("reading_line_visible", "true" if self._reading_line_visible else "false")
 
     def _init_ui(self):
         layout = QGridLayout(self)
@@ -307,6 +309,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.speed_changed.connect(self._on_speed_changed)
             self._control_panel.margin_changed.connect(self._on_margin_changed)
             self._control_panel.mirror_toggled.connect(self._toggle_mirror)
+            self._control_panel.reading_line_toggled.connect(self._toggle_reading_line)
             self._control_panel.horizontal_flip_toggled.connect(self._on_horizontal_flip_toggled)
             self._control_panel.vertical_flip_toggled.connect(self._on_vertical_flip_toggled)
 
@@ -343,6 +346,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.set_speed(self._wpm)
             self._control_panel.set_margin(self._margin)
             self._control_panel.set_mirror_state(self._is_mirror_open)
+            self._control_panel.set_reading_line_state(self._reading_line_visible)
             self._control_panel.set_horizontal_flip(self._horizontal_flip)
             self._control_panel.set_vertical_flip(self._vertical_flip)
             self._control_panel.show()
@@ -361,6 +365,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.set_speed(self._wpm)
             self._control_panel.set_margin(self._margin)
             self._control_panel.set_mirror_state(self._is_mirror_open)
+            self._control_panel.set_reading_line_state(self._reading_line_visible)
             self._control_panel.set_horizontal_flip(self._horizontal_flip)
             self._control_panel.set_vertical_flip(self._vertical_flip)
             self._control_panel.show()
@@ -373,12 +378,13 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._reading_line_y = self._view.height() // 4
         self._mirror_reading_line_y = self._reading_line_y * self._mirror_scale
         rlh = int(self._font_size * self._line_spacing * 3)
+        display = "block" if self._reading_line_visible else "none"
         self._view.page().runJavaScript(
             'var rl=document.getElementById("rl");'
             'if(rl){'
             '  rl.style.top="' + str(self._reading_line_y) + 'px";'
             '  rl.style.height="' + str(rlh) + 'px";'
-            '  rl.style.display="block";'
+            '  rl.style.display="'+display+'";'
             '  window._readingLineTop=' + str(self._reading_line_y) + ';'
             '}'
         )
@@ -407,6 +413,15 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         else:
             self._on_back()
 
+    def _toggle_reading_line(self):
+        self._reading_line_visible = not self._reading_line_visible
+        self._save_settings()
+        self._update_reading_line()
+        if self._control_panel:
+            self._control_panel.set_reading_line_state(self._reading_line_visible)
+        if self._is_mirror_open and self._mirror_window:
+            self._mirror_window.set_reading_line_visibility(self._reading_line_visible)
+
     def _on_back(self):
         self._pause()
         self._close_mirror()
@@ -426,6 +441,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._shortcut_mgr.set_shortcuts({
                 Qt.Key.Key_Space: self._toggle_play,
                 Qt.Key.Key_F1: self._toggle_control_panel,
+                Qt.Key.Key_F2: self._toggle_reading_line,
                 Qt.Key.Key_F11: self._toggle_fullscreen,
                 Qt.Key.Key_Escape: self._exit_fullscreen,
                 Qt.Key.Key_Up: self._start_scroll_up,
@@ -451,6 +467,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.set_speed(self._wpm)
             self._control_panel.set_margin(self._margin)
             self._control_panel.set_mirror_state(self._is_mirror_open)
+            self._control_panel.set_reading_line_state(self._reading_line_visible)
             self._control_panel.set_horizontal_flip(self._horizontal_flip)
             self._control_panel.set_vertical_flip(self._vertical_flip)
             self._control_panel.show()

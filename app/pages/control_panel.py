@@ -21,6 +21,7 @@ class ControlPanel(QWidget):
     speed_changed = pyqtSignal(int)
     margin_changed = pyqtSignal(int)
     mirror_toggled = pyqtSignal()
+    reading_line_toggled = pyqtSignal()
     horizontal_flip_toggled = pyqtSignal(bool)
     vertical_flip_toggled = pyqtSignal(bool)
 
@@ -242,6 +243,21 @@ class ControlPanel(QWidget):
         self._speed_slider.valueChanged.connect(self._on_speed_changed)
         layout.addWidget(self._speed_slider)
 
+        # ─── Reading Line Toggle ────────────────────
+        reading_line_layout = QHBoxLayout()
+        reading_line_title = QLabel("引导框")
+        reading_line_title.setObjectName("sectionLabel")
+        reading_line_layout.addWidget(reading_line_title)
+        reading_line_layout.addStretch()
+        self._reading_line_label = QLabel("已开启")
+        self._reading_line_label.setObjectName("valueLabel")
+        reading_line_layout.addWidget(self._reading_line_label)
+        layout.addLayout(reading_line_layout)
+
+        self._reading_line_btn = QPushButton("关闭引导框")
+        self._reading_line_btn.clicked.connect(self.reading_line_toggled.emit)
+        layout.addWidget(self._reading_line_btn)
+
         # ─── Mirror Toggle ──────────────────────────
         mirror_layout = QHBoxLayout()
         mirror_title = QLabel("镜像模式")
@@ -298,7 +314,7 @@ class ControlPanel(QWidget):
         hint1.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(hint1)
 
-        hint2 = QLabel("R 重置 · M 镜像 · F1 隐藏面板")
+        hint2 = QLabel("R 重置 · M 镜像 · F2 引导框 · F1 隐藏面板")
         hint2.setObjectName("hintLabel")
         hint2.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(hint2)
@@ -387,6 +403,14 @@ class ControlPanel(QWidget):
         else:
             self._mirror_label.setText("已关闭")
             self._mirror_btn.setText("开启镜像")
+
+    def set_reading_line_state(self, active: bool):
+        if active:
+            self._reading_line_label.setText("已开启")
+            self._reading_line_btn.setText("关闭引导框")
+        else:
+            self._reading_line_label.setText("已关闭")
+            self._reading_line_btn.setText("开启引导框")
 
     def _on_hflip_toggled(self, checked: bool):
         if checked:

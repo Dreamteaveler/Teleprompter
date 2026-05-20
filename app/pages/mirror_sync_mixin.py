@@ -58,6 +58,7 @@ class MirrorSyncMixin:
         self._mirror_reading_line_y = self._reading_line_y * self._mirror_scale
         html = self._build_html(self._manuscript.content, scale=self._mirror_scale, vflip=self._vertical_flip)
         scroll_y = self._scroll_position * self._mirror_scale if keep_scroll else 0.0
+        self._mirror_window._reading_line_visible = self._reading_line_visible
         self._mirror_window.set_content(html, scroll_y, self._mirror_reading_line_y)
 
     def _sync_mirror_if_open(self, keep_scroll: bool = False):

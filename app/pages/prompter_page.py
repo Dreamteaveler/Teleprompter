@@ -1,9 +1,10 @@
 # @license
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2024 杭州星奥传媒有限公司（影视飓风）
 #
-# 本文件基于原始文件进行了修改。
-# 本项目基于影视飓风提词器（Apache-2.0 许可）的源代码重新实现。
+# 本文件基于原始文件（Apache-2.0 许可）进行了修改。
+# 本项目基于飞书妙搭平台飓风提词器的源代码重新实现。
+# 修改后按 GPL-3.0-or-later 分发。
 #
 import re
 import html as html_module

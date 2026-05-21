@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# @license
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (c) 2024 杭州星奥传媒有限公司（影视飓风）
+#
+# 修改后按 GPL-3.0-or-later 分发。
+#
 """提词器打包脚本 — 使用 PyInstaller 生成单个 exe
 
 用法:

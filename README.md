@@ -21,7 +21,7 @@ python main.py
 ```
 
 ### 打包版本
-下载 [Releases](https://github.com/Dreamteaveler/Teleprompter/releases) 中的 `提词器1.07.exe`，双击运行（无需安装 Python）
+下载 [Releases](https://github.com/Dreamteaveler/Teleprompter/releases) 中的 `提词器1.07.zip`，解压出来后双击运行（无需安装 Python）
 
 ## 技术栈
 Python 3.12 · PyQt6 · PyQt6-WebEngine · MathJax 3 · SQLite · python-docx · Pillow · Markdown · lxml

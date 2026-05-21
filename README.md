@@ -1,5 +1,7 @@
 # 提词器 (Teleprompter) v1.07
 
+**https://github.com/Dreamteaveler/Teleprompter**
+
 专业桌面提词软件，适用于视频录制、直播、演讲、教学场景。支持稿件编辑、Word导入、公式渲染、自动滚动播放、镜像输出。
 
 ## 功能特性

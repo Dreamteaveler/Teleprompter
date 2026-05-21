@@ -214,7 +214,7 @@ class ControlPanel(QWidget):
         ))
         self._font_size_slider = QSlider(Qt.Orientation.Horizontal)
         self._font_size_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        self._font_size_slider.setRange(36, 200)
+        self._font_size_slider.setRange(50, 250)
         self._font_size_slider.setValue(120)
         self._font_size_slider.valueChanged.connect(self._on_font_size_changed)
         layout.addWidget(self._font_size_slider)

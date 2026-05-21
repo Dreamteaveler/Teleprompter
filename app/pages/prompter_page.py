@@ -190,7 +190,8 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         body = re.sub(r'</html>', '', body, flags=re.DOTALL)
         body = re.sub(r'<head[^>]*>.*?</head>', '', body, flags=re.DOTALL)
         body = re.sub(r'background(?:-color)?\s*:\s*#[0-9a-fA-F]+;?', '', body)
-        body = re.sub(r'\bcolor\s*:\s*(?:#000(?:000)?|black)\s*;?', '', body)
+        body = re.sub(r'\bcolor\s*:\s*[^;"]+;?', '', body)
+        body = re.sub(r'font-size\s*:\s*[^;"]+;?', '', body)
         return body.strip()
 
     def _plain_to_html(self, text: str) -> str:

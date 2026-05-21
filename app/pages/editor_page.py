@@ -16,11 +16,13 @@ from PyQt6.QtGui import (
 )
 
 import re
-import html as html_module
+import os
+
+from lxml import etree
 
 from app.database import create_manuscript, update_manuscript
 from app.models import Manuscript
-from app.docx_importer import import_docx_file
+from app.docx_importer import import_docx_file, _omml_to_latex
 from app.image_utils import compress_images_in_html
 
 
@@ -30,7 +32,15 @@ class FormulaAwareTextEdit(QTextEdit):
 
     def insertFromMimeData(self, source):
         if self.formula_paste_handler:
-            if self.formula_paste_handler(source):
+            result = self.formula_paste_handler(source)
+            if result is True:
+                return
+            if isinstance(result, str):
+                cursor = self.textCursor()
+                cursor.insertHtml(result)
+                self.setTextCursor(cursor)
+                if self.post_paste_handler:
+                    self.post_paste_handler()
                 return
         super().insertFromMimeData(source)
         if self.post_paste_handler:
@@ -145,6 +155,7 @@ class EditorPage(QWidget):
 
     def _save(self):
         title = self._title_input.text().strip()
+        self._apply_chinese_formatting()
         content = self._content_edit.toHtml().strip()
         content = self._normalize_html_content(content)
         if not title:
@@ -171,7 +182,7 @@ class EditorPage(QWidget):
         body = re.sub(r'<html[^>]*>', '', body, flags=re.DOTALL)
         body = re.sub(r'</html>', '', body, flags=re.DOTALL)
         body = re.sub(r'<head[^>]*>.*?</head>', '', body, flags=re.DOTALL)
-        body = html_module.unescape(body.strip())
+        body = body.strip()
         body = self._clean_html_noise(body)
         body = self._convert_formula_images(body)
         body = compress_images_in_html(body)
@@ -191,6 +202,7 @@ class EditorPage(QWidget):
             attrs = re.sub(r'-qt-block-indent\s*:\s*\d+\s*;?', '', attrs)
             attrs = re.sub(r'text-indent\s*:\s*\d+px\s*;?', '', attrs)
             attrs = re.sub(r'white-space\s*:\s*pre-wrap\s*;?', '', attrs)
+            attrs = re.sub(r'\bcolor\s*:\s*[^;"]+;?', '', attrs)
             attrs = re.sub(r'\s*style\s*=\s*"\s*"', '', attrs)
             attrs = re.sub(r"\s*style\s*=\s*'\s*'", '', attrs)
             return attrs
@@ -218,60 +230,63 @@ class EditorPage(QWidget):
         html = self._convert_formula_images(html)
         return re.sub(r'<img[^>]*/?>', '', html, flags=re.DOTALL)
 
-    def _handle_formula_paste_mime(self, mime) -> bool:
-        if not mime:
+    def _handle_formula_paste_mime(self, mime) -> str | bool:
+        if not mime or not mime.hasHtml():
+            return False
+        html = mime.html()
+        if '<m:oMath' not in html and '<m:oMathPara' not in html:
+            return False
+        try:
+            processed = self._convert_omml_to_latex(html)
+            return processed if processed != html else False
+        except Exception:
             return False
 
-        has_text = mime.hasText()
-        has_html = mime.hasHtml()
-        plain_text = mime.text() if has_text else ""
-        html_content = mime.html() if has_html else ""
+    OMML_BLOCK_PATTERN = re.compile(
+        r'<!--\s*\[if\s+gte\s+msEquation\s+12\]>.*?</m:oMath(?:Para)?[^>]*>.*?<!\[endif\]-->\s*'
+        r'<!\[if\s+!msEquation\]>.*?<!\[endif\]>',
+        re.DOTALL | re.IGNORECASE,
+    )
+    OMML_TAG_PATTERN = re.compile(
+        r'<(m:oMath(?:Para)?)\b[^>]*>(.*?)</\1>', re.DOTALL,
+    )
+    _OMML_NS = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 
-        has_images = bool(re.search(r'<img[^>]*>', html_content, re.IGNORECASE))
-        has_images = has_images or bool(re.search(r'data:image/', html_content))
+    def _convert_omml_to_latex(self, html: str) -> str:
+        def _replace(match):
+            block = match.group(0)
+            omml_match = self.OMML_TAG_PATTERN.search(block)
+            if not omml_match:
+                return block
+            tag_name = omml_match.group(1)
+            inner = self._clean_omml_xml(omml_match.group(2))
+            latex = self._parse_omml_to_latex(tag_name, inner)
+            if latex is None:
+                return block
+            if tag_name == 'm:oMathPara':
+                return f"$${latex}$$"
+            return f"${latex}$"
+        return self.OMML_BLOCK_PATTERN.sub(_replace, html)
 
-        tex_in_text = bool(re.search(r'(?<!\$)\$(?!\$).+?(?<!\$)\$(?!\$)', plain_text))
-        tex_in_text = tex_in_text or bool(re.search(r'\$\$[\s\S]*?\$\$', plain_text))
-        tex_in_html = bool(re.search(r'\$\$[\s\S]*?\$\$', html_content))
-        tex_in_html = tex_in_html or bool(re.search(r'(?<!\$)\$(?!\$).+?(?<!\$)\$(?!\$)', html_content))
-        mjx_in_html = bool(re.search(r'<mjx-container', html_content, re.IGNORECASE))
-        omml_in_html = bool(re.search(r'<m:oMath[>\s]|<m:oMathPara[>\s]', html_content, re.IGNORECASE))
+    _NON_OML_TAG = re.compile(r'</?(?!m:)[a-zA-Z][a-zA-Z0-9]*(?:\s[^>]*)?>')
 
-        unicode_math = False
-        count = 0
-        _MATH_RANGES = [
-            (0x0370, 0x03FF), (0x1F00, 0x1FFF),
-            (0x2200, 0x22FF), (0x2A00, 0x2AFF),
-            (0x27C0, 0x27EF), (0x2980, 0x29FF),
-            (0x2070, 0x209F), (0x00B0, 0x00B0),
-            (0x00B1, 0x00B1), (0x00D7, 0x00D7),
-            (0x00F7, 0x00F7), (0x00B7, 0x00B7),
-            (0x2190, 0x21FF), (0x2300, 0x23FF),
-        ]
-        for ch in plain_text:
-            cp = ord(ch)
-            if any(lo <= cp <= hi for lo, hi in _MATH_RANGES):
-                count += 1
-                if count >= 3:
-                    unicode_math = True
-                    break
-            elif cp < 128:
-                count = 0
+    @staticmethod
+    def _clean_omml_xml(xml_str: str) -> str:
+        xml_str = EditorPage._NON_OML_TAG.sub('', xml_str)
+        xml_str = re.sub(r'\s+', ' ', xml_str).strip()
+        xml_str = re.sub(r'<m:r>([^<]+)</m:r>', r'<m:r><m:t>\1</m:t></m:r>', xml_str)
+        xml_str = re.sub(r'</m:rPr>([^<]+)</m:r>', r'</m:rPr><m:t>\1</m:t></m:r>', xml_str)
+        return xml_str
 
-        has_formula = tex_in_text or tex_in_html or mjx_in_html or omml_in_html or unicode_math
-        if not has_images and not has_formula:
-            return False
-
-        msg = "检测到图片或公式，是否转换格式以保证正确渲染？"
-        reply = QMessageBox.question(
-            self, "转换提示",
-            msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
-            return False
-        return True
+    @staticmethod
+    def _parse_omml_to_latex(tag_name: str, inner_xml: str) -> str | None:
+        try:
+            ns = EditorPage._OMML_NS
+            wrapped = f'<root xmlns:m="{ns}"><{tag_name} xmlns:m="{ns}">{inner_xml}</{tag_name}></root>'
+            root = etree.fromstring(wrapped.encode('utf-8'))
+            return _omml_to_latex(root[0]) or None
+        except Exception:
+            return None
 
     def _on_cancel(self):
         self.cancelled.emit()

@@ -88,7 +88,7 @@ class PlaybackMixin:
             self._control_panel.set_speed(value)
 
     def _speed_up(self):
-        new_wpm = min(400, self._wpm + 5)
+        new_wpm = min(400, self._wpm + 2)
         self._wpm = new_wpm
         self._save_settings()
         if self._is_playing:
@@ -98,7 +98,7 @@ class PlaybackMixin:
             self._control_panel.set_speed(new_wpm)
 
     def _speed_down(self):
-        new_wpm = max(0, self._wpm - 5)
+        new_wpm = max(0, self._wpm - 2)
         self._wpm = new_wpm
         self._save_settings()
         if self._is_playing:

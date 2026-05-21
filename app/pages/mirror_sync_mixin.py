@@ -81,10 +81,11 @@ class MirrorSyncMixin:
         if self._control_panel:
             self._control_panel.set_mirror_state(True)
 
-    def _close_mirror(self):
+    def _close_mirror(self, remember: bool = True):
         self._is_mirror_open = False
-        self._mirror_mode = False
-        self._save_settings()
+        if remember:
+            self._mirror_mode = False
+            self._save_settings()
         self._stop_sync_timer()
         if self._mirror_window:
             self._mirror_window.close()

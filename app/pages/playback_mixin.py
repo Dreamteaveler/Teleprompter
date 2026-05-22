@@ -77,7 +77,6 @@ class PlaybackMixin:
         # 内容不足一屏，或已滚动到底部（留 2px 容差）
         if max_y <= 1 or (max_y > 1 and current_y >= max_y - 2):
             self._pause()
-            self.completed.emit()
 
     def _on_speed_changed(self, value: int):
         self._wpm = value

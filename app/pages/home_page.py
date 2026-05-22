@@ -155,16 +155,16 @@ class HomePage(QWidget):
         self._search_input.textChanged.connect(self._on_search)
         header_layout.addWidget(self._search_input)
 
-        import_btn = QPushButton("📄 导入 Word")
+        import_btn = QPushButton("+ 新建稿件")
         import_btn.setObjectName("ghostButton")
         import_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        import_btn.clicked.connect(self._import_word)
+        import_btn.clicked.connect(lambda: self.navigate_to_editor.emit(None))
         header_layout.addWidget(import_btn)
 
-        new_btn = QPushButton("+ 新建稿件")
+        new_btn = QPushButton("📄 导入 Word")
         new_btn.setObjectName("accentButton")
         new_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        new_btn.clicked.connect(lambda: self.navigate_to_editor.emit(None))
+        new_btn.clicked.connect(self._import_word)
         header_layout.addWidget(new_btn)
 
         layout.addWidget(header)

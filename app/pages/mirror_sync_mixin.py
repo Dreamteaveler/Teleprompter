@@ -45,11 +45,12 @@ class MirrorSyncMixin:
     #     主窗口拖拽引导框 → JS 更新 window._readingLineTop →
     #     _tick_sync_mirror 读取并 ×_mirror_scale 推送到镜像。
     #
-    #  4. 任何窗口 resize → _resync_debounce_timer(300ms) →
-    #     _sync_mirror_if_open() 重建 HTML + 重新计算缩放。
+    #  4. 任何窗口 resize → _update_mirror_scale() 立即更新 _mirror_scale，
+    #     保证滚动同步缩放比实时正确。_resync_debounce_timer(300ms) 仅在
+    #     需要时重建 HTML（字号/行距/边距依赖 scale 时才变化）。
     # ═══════════════════════════════════════════════════════════════
 
-    def _sync_mirror_content(self, keep_scroll: bool = False):
+    def _sync_mirror_content(self, keep_scroll: bool = True):
         if not self._mirror_window or not self._manuscript:
             return
         main_w = self._view.width()
@@ -62,22 +63,35 @@ class MirrorSyncMixin:
         self._mirror_window._reading_line_visible = self._reading_line_visible
         self._mirror_window.set_content(html, scroll_y, self._mirror_reading_line_y)
 
-    def _sync_mirror_if_open(self, keep_scroll: bool = False):
+    def _sync_mirror_if_open(self, keep_scroll: bool = True):
         if self._is_mirror_open and self._mirror_window:
             self._sync_mirror_content(keep_scroll)
+
+    def _update_mirror_scale(self):
+        if not self._mirror_window or not self._is_mirror_open:
+            return
+        main_w = self._view.width()
+        mirror_w = self._mirror_window.view_width()
+        if main_w > 100 and mirror_w > 100:
+            self._mirror_scale = mirror_w / main_w
+        self._mirror_reading_line_y = self._reading_line_y * self._mirror_scale
+
+    def _on_mirror_resized(self):
+        self._update_mirror_scale()
+        self._resync_debounce_timer.start()
 
     def _open_mirror(self):
         if self._mirror_window is None:
             self._mirror_window = MirrorWindow()
             self._mirror_window.destroyed.connect(self._on_mirror_closed)
-            self._mirror_window.resized.connect(self._resync_debounce_timer.start)
+            self._mirror_window.resized.connect(self._on_mirror_resized)
         self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip)
         self._mirror_window.showNormal()
         self._is_mirror_open = True
         self._mirror_mode = True
         self._save_settings()
         if self._manuscript:
-            self._sync_mirror_content()
+            self._sync_mirror_content(keep_scroll=False)
         self._start_sync_timer()
         if self._control_panel:
             self._control_panel.set_mirror_state(True)
@@ -114,7 +128,8 @@ class MirrorSyncMixin:
             self._vertical_flip = False
         self._save_settings()
         if self._is_mirror_open and self._mirror_window:
-            self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip)
+            self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip, rebuild=False)
+            self._sync_mirror_content()
 
     def _on_vertical_flip_toggled(self, enabled: bool):
         self._vertical_flip = enabled
@@ -122,7 +137,8 @@ class MirrorSyncMixin:
             self._horizontal_flip = False
         self._save_settings()
         if self._is_mirror_open and self._mirror_window:
-            self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip)
+            self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip, rebuild=False)
+            self._sync_mirror_content()
 
     def _start_sync_timer(self):
         if self._is_mirror_open:
@@ -139,21 +155,23 @@ class MirrorSyncMixin:
         if not self._is_mirror_open or not self._mirror_window:
             self._sync_timer.stop()
             return
-        if not self._page_ready or self._sync_pending:
+        if not self._page_ready:
             return
-        self._sync_pending = True
+        self._sync_version += 1
+        version = self._sync_version
         self._view.page().runJavaScript(
             "[window.pageYOffset, window.getReadingLineTop ? window.getReadingLineTop() : (window.innerHeight/3), (document.getElementById('rl')||{}).offsetHeight||0]",
-            lambda result: self._on_sync_position(result)
+            lambda result: self._on_sync_position(result, version)
         )
 
     #  ── 纯坐标缩放，无额外变换 ──
     #  scroll_y × scale → 保证不同分辨率每行文字对齐
     #  rl_y × scale    → 引导框位置等比缩放
     #  rl_h × scale    → 引导框高度等比缩放
-    def _on_sync_position(self, result):
+    def _on_sync_position(self, result, version):
+        if version != self._sync_version:
+            return
         if result is None:
-            self._sync_pending = False
             return
         scroll_y = float(result[0]) if result[0] is not None else self._scroll_position
         rl_y = float(result[1]) if len(result) > 1 and result[1] is not None else 0
@@ -162,4 +180,3 @@ class MirrorSyncMixin:
         if self._mirror_window and self._mirror_scale > 0:
             self._mirror_window.sync_scroll(scroll_y * self._mirror_scale)
             self._mirror_window.set_reading_line(rl_y * self._mirror_scale, rl_h * self._mirror_scale)
-        self._sync_pending = False

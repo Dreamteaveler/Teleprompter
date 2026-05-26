@@ -17,7 +17,7 @@ class PlaybackMixin:
 
     要求宿主类具有以下属性：
     - _manuscript, _is_playing, _page_ready
-    - _tick_frame, _last_tick_time, _pixels_per_second
+    - _tick_frame, _last_tick_time, _pixels_per_second, _accumulated_scroll
     - _wpm, _font_size, _scroll_position, _scroll_height
     - _timer (QTimer), _view (QWebEngineView)
     - _control_panel, _auto_resume
@@ -38,6 +38,7 @@ class PlaybackMixin:
         self._tick_frame = 0
         self._refresh_scroll_height()
         self._last_tick_time = time.monotonic()
+        self._accumulated_scroll = self._scroll_position
         chars_per_minute = self._wpm * 2.5
         self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
         self._timer.start(16)
@@ -57,8 +58,8 @@ class PlaybackMixin:
         now = time.monotonic()
         elapsed = now - self._last_tick_time
         self._last_tick_time = now
-        delta = elapsed * self._pixels_per_second
-        self._view.page().runJavaScript(f"window.scrollBy(0, {delta});")
+        self._accumulated_scroll += elapsed * self._pixels_per_second
+        self._view.page().runJavaScript(f"window.scrollTo(0, {self._accumulated_scroll});")
 
         self._tick_frame += 1
 
@@ -74,7 +75,7 @@ class PlaybackMixin:
             return
         max_y = float(result[0]) if result[0] is not None else 0
         current_y = float(result[1]) if result[1] is not None else 0
-        # 内容不足一屏，或已滚动到底部（留 2px 容差）
+        self._accumulated_scroll = current_y
         if max_y <= 1 or (max_y > 1 and current_y >= max_y - 2):
             self._pause()
 
@@ -82,18 +83,18 @@ class PlaybackMixin:
         self._wpm = value
         self._save_settings()
         if self._is_playing:
-            self._pause()
-            self._play()
+            chars_per_minute = self._wpm * 2.5
+            self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
         if self._control_panel:
             self._control_panel.set_speed(value)
 
     def _speed_up(self):
-        new_wpm = min(400, self._wpm + 2)
+        new_wpm = min(200, self._wpm + 2)
         self._wpm = new_wpm
         self._save_settings()
         if self._is_playing:
-            self._pause()
-            self._play()
+            chars_per_minute = self._wpm * 2.5
+            self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
         if self._control_panel:
             self._control_panel.set_speed(new_wpm)
 
@@ -102,13 +103,14 @@ class PlaybackMixin:
         self._wpm = new_wpm
         self._save_settings()
         if self._is_playing:
-            self._pause()
-            self._play()
+            chars_per_minute = self._wpm * 2.5
+            self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
         if self._control_panel:
             self._control_panel.set_speed(new_wpm)
 
     def _reset_scroll(self):
         self._scroll_position = 0.0
+        self._accumulated_scroll = 0.0
         self._last_tick_time = time.monotonic()
         self._pause()
         self._view.page().runJavaScript("window.scrollTo(0, 0);")

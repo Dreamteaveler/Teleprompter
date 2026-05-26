@@ -239,7 +239,7 @@ class ControlPanel(QWidget):
         ))
         self._speed_slider = QSlider(Qt.Orientation.Horizontal)
         self._speed_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        self._speed_slider.setRange(0, 400)
+        self._speed_slider.setRange(0, 200)
         self._speed_slider.setValue(30)
         self._speed_slider.valueChanged.connect(self._on_speed_changed)
         layout.addWidget(self._speed_slider)

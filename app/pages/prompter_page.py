@@ -56,6 +56,8 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._mirror_reading_line_y: float = 0.0
         self._auto_resume: bool = False
         self._sync_pending: bool = False
+        self._sync_version: int = 0
+        self._accumulated_scroll: float = 0.0
 
         self._mirror_window: MirrorWindow | None = None
         self._is_mirror_open = False
@@ -260,7 +262,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._manuscript = manuscript
         self._load_content(manuscript.content)
         if self._is_mirror_open:
-            self._sync_mirror_content()
+            self._sync_mirror_content(keep_scroll=False)
         self._scroll_position = 0.0
         self._start_time = 0.0
         self._pixels_per_second = 0.0
@@ -493,5 +495,6 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._update_reading_line()
+        self._update_mirror_scale()
         self._resync_debounce_timer.start()
 

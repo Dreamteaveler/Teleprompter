@@ -68,15 +68,12 @@ class MirrorWindow(QMainWindow):
     def view_width(self) -> int:
         return max(100, self._view.width())
 
-    def set_flip(self, hflip: bool, vflip: bool):
+    def set_flip(self, hflip: bool, vflip: bool, rebuild: bool = True):
         changed = self._hflip != hflip or self._vflip != vflip
         self._hflip = hflip
         self._vflip = vflip
-        if changed and self._content_html:
-            self._view.page().runJavaScript(
-                "window.pageYOffset",
-                lambda y: self._rebuild_with_scroll(float(y) if y else 0)
-            )
+        if rebuild and changed and self._content_html:
+            self._rebuild_with_scroll(self._pending_scroll_y)
 
     def sync_scroll(self, scroll_y: float):
         self._pending_scroll_y = scroll_y

@@ -1,4 +1,4 @@
-# 提词器 (Teleprompter) v1.07
+# 提词器 (Teleprompter) v1.08
 
 专业桌面提词软件，适用于视频录制、直播、演讲、教学场景。支持稿件编辑、Word导入、公式渲染、自动滚动播放、镜像输出。
 
@@ -21,7 +21,7 @@ python main.py
 ```
 
 ### 打包版本
-下载 [Releases](https://github.com/Dreamteaveler/Teleprompter/releases) 中的 `提词器1.07.zip`，解压出来后双击运行（无需安装 Python）
+下载 [Releases](https://github.com/Dreamteaveler/Teleprompter/releases) 中的 `提词器1.08.zip`，解压出来后双击运行（无需安装 Python）
 
 ## 技术栈
 Python 3.12 · PyQt6 · PyQt6-WebEngine · MathJax 3 · SQLite · python-docx · Pillow · Markdown · lxml

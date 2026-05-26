@@ -59,7 +59,7 @@ def check_deps():
         pkg = dep.split(">=")[0].split("==")[0].strip()
         try:
             __import__(pkg.replace("-", "_"))
-            print(f"  ✓ {pkg}")
+            print(f"  [OK] {pkg}")
         except ImportError:
             # pyinstaller 作为命令行工具不总能通过 __import__ 找到
             try:
@@ -67,10 +67,10 @@ def check_deps():
                     [sys.executable, "-c", f"import {pkg.replace('-','_')}"],
                     capture_output=True,
                 )
-                print(f"  ✓ {pkg}")
+                print(f"  [OK] {pkg}")
             except Exception:
                 missing.append(dep)
-                print(f"  ✗ {dep} (缺失)")
+                print(f"  [MISS] {dep}")
 
     if missing:
         print(f"\n缺少以下依赖: {missing}")

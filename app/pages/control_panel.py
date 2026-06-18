@@ -335,6 +335,9 @@ class ControlPanel(QWidget):
 
         layout.addStretch()
 
+        for widget in self.findChildren((QPushButton, QSlider)):
+            widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+
     def _make_section_row(self, title_text, unit, value_label):
         row = QHBoxLayout()
         section = QLabel(title_text)

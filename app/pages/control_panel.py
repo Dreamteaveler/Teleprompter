@@ -240,8 +240,8 @@ class ControlPanel(QWidget):
         ))
         self._speed_slider = QSlider(Qt.Orientation.Horizontal)
         self._speed_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        self._speed_slider.setRange(0, 200)
-        self._speed_slider.setValue(30)
+        self._speed_slider.setRange(0, 100)
+        self._speed_slider.setValue(15)
         self._speed_slider.valueChanged.connect(self._on_speed_changed)
         layout.addWidget(self._speed_slider)
 
@@ -361,8 +361,9 @@ class ControlPanel(QWidget):
         self.line_spacing_changed.emit(value)
 
     def _on_speed_changed(self, value):
-        self._speed_label.setText(str(value))
-        self.speed_changed.emit(value)
+        wpm = value * 2
+        self._speed_label.setText(str(wpm))
+        self.speed_changed.emit(wpm)
 
     def set_playing(self, playing: bool):
         self._is_playing = playing
@@ -399,8 +400,9 @@ class ControlPanel(QWidget):
         self._line_spacing_slider.blockSignals(False)
 
     def set_speed(self, value: int):
+        slider_value = value // 2
         self._speed_slider.blockSignals(True)
-        self._speed_slider.setValue(value)
+        self._speed_slider.setValue(slider_value)
         self._speed_label.setText(str(value))
         self._speed_slider.blockSignals(False)
 

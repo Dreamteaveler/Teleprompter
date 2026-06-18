@@ -47,6 +47,7 @@ class MirrorWindow(QMainWindow):
         self._hflip: bool = True
         self._vflip: bool = False
         self._reading_line_visible: bool = True
+        self._reading_line_opacity: float = 1.0
 
         self._view = QWebEngineView()
         self._view.setStyleSheet("background-color: #0d0d0d; border: none;")
@@ -108,6 +109,12 @@ class MirrorWindow(QMainWindow):
         display = "block" if visible else "none"
         self._view.page().runJavaScript(
             'var rl=document.getElementById("rl");if(rl){rl.style.display="' + display + '";}'
+        )
+
+    def set_reading_line_opacity(self, opacity: float):
+        self._reading_line_opacity = opacity
+        self._view.page().runJavaScript(
+            'var rl=document.getElementById("rl");if(rl){rl.style.borderColor="rgba(219,157,22,' + str(opacity) + ')";}'
         )
 
     def _load_html(self):

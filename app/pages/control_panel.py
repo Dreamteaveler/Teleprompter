@@ -23,6 +23,7 @@ class ControlPanel(QWidget):
     margin_changed = pyqtSignal(int)
     mirror_toggled = pyqtSignal()
     reading_line_toggled = pyqtSignal()
+    reading_line_opacity_changed = pyqtSignal(float)
     horizontal_flip_toggled = pyqtSignal(bool)
     vertical_flip_toggled = pyqtSignal(bool)
 
@@ -259,6 +260,18 @@ class ControlPanel(QWidget):
         self._reading_line_btn.clicked.connect(self.reading_line_toggled.emit)
         layout.addWidget(self._reading_line_btn)
 
+        # ─── Reading Line Opacity ───────────────────
+        self._rl_opacity_label = QLabel("100%")
+        layout.addLayout(self._make_section_row(
+            "引导框透明度", "", self._rl_opacity_label
+        ))
+        self._rl_opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._rl_opacity_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        self._rl_opacity_slider.setRange(10, 100)
+        self._rl_opacity_slider.setValue(100)
+        self._rl_opacity_slider.valueChanged.connect(self._on_rl_opacity_changed)
+        layout.addWidget(self._rl_opacity_slider)
+
         # ─── Mirror Toggle ──────────────────────────
         mirror_layout = QHBoxLayout()
         mirror_title = QLabel("镜像模式")
@@ -412,6 +425,17 @@ class ControlPanel(QWidget):
         else:
             self._reading_line_label.setText("已关闭")
             self._reading_line_btn.setText("开启引导框")
+
+    def _on_rl_opacity_changed(self, value):
+        self._rl_opacity_label.setText(f"{value}%")
+        self.reading_line_opacity_changed.emit(value / 100.0)
+
+    def set_reading_line_opacity(self, opacity: float):
+        value = int(opacity * 100)
+        self._rl_opacity_slider.blockSignals(True)
+        self._rl_opacity_slider.setValue(value)
+        self._rl_opacity_label.setText(f"{value}%")
+        self._rl_opacity_slider.blockSignals(False)
 
     def _on_hflip_toggled(self, checked: bool):
         if checked:

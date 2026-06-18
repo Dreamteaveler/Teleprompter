@@ -178,6 +178,7 @@ class MirrorSyncMixin:
         rl_y = float(result[1]) if len(result) > 1 and result[1] is not None else 0
         rl_h = float(result[2]) if len(result) > 2 and result[2] is not None else 0
         self._scroll_position = scroll_y
+        self._accumulated_scroll = scroll_y
         if self._mirror_window and self._mirror_scale > 0:
             self._mirror_window.sync_scroll(scroll_y * self._mirror_scale)
             self._mirror_window.set_reading_line(rl_y * self._mirror_scale, rl_h * self._mirror_scale)

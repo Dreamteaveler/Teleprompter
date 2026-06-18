@@ -58,8 +58,9 @@ class PlaybackMixin:
         now = time.monotonic()
         elapsed = now - self._last_tick_time
         self._last_tick_time = now
-        self._accumulated_scroll += elapsed * self._pixels_per_second
-        self._view.page().runJavaScript(f"window.scrollTo(0, {self._accumulated_scroll});")
+        delta = elapsed * self._pixels_per_second
+        self._accumulated_scroll += delta
+        self._view.page().runJavaScript(f"window.scrollBy(0, {delta});")
 
         self._tick_frame += 1
 
@@ -150,6 +151,7 @@ class PlaybackMixin:
 
     def _on_scroll_tick_position(self, y):
         self._scroll_position = y
+        self._accumulated_scroll = y
 
     def _compute_scroll_speed(self, elapsed_seconds: float) -> float:
         base = self._font_size * 0.05

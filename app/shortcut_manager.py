@@ -50,19 +50,25 @@ class ShortcutManager(QObject):
         except Exception:
             return False
 
+    def _event_window(self, obj):
+        try:
+            return obj.window()
+        except Exception:
+            return None
+
     def add_allowed_window(self, win):
         self._allowed_windows.add(win)
 
     def eventFilter(self, obj, event):
         # ── mouse double-click: main window only ──
         if event.type() == QEvent.Type.MouseButtonPress:
-            if obj.window() is not self._window:
+            if self._event_window(obj) is not self._window:
                 return False
             self._press_time = time.monotonic()
             return False
 
         if event.type() == QEvent.Type.MouseButtonRelease:
-            if obj.window() is not self._window:
+            if self._event_window(obj) is not self._window:
                 return False
             now = time.monotonic()
             if now - self._press_time < 0.3:
@@ -76,8 +82,8 @@ class ShortcutManager(QObject):
 
         # ── wheel: forward from control panel to main view ──
         if event.type() == QEvent.Type.Wheel:
-            win = obj.window()
-            if win is not self._window and win in self._allowed_windows:
+            win = self._event_window(obj)
+            if win is not self._window and win is not None and win in self._allowed_windows:
                 delta = event.angleDelta().y()
                 if delta != 0 and self._view is not None:
                     try:

@@ -54,14 +54,15 @@ class ShortcutManager(QObject):
         self._allowed_windows.add(win)
 
     def eventFilter(self, obj, event):
+        # ── mouse double-click: main window only ──
         if event.type() == QEvent.Type.MouseButtonPress:
-            if not self._is_event_for_this_window(obj):
+            if obj.window() is not self._window:
                 return False
             self._press_time = time.monotonic()
             return False
 
         if event.type() == QEvent.Type.MouseButtonRelease:
-            if not self._is_event_for_this_window(obj):
+            if obj.window() is not self._window:
                 return False
             now = time.monotonic()
             if now - self._press_time < 0.3:
@@ -73,6 +74,19 @@ class ShortcutManager(QObject):
                 self._last_valid_click_time = now
             return False
 
+        # ── wheel: forward from control panel to main view ──
+        if event.type() == QEvent.Type.Wheel:
+            win = obj.window()
+            if win is not self._window and win in self._allowed_windows:
+                delta = event.angleDelta().y()
+                if delta != 0:
+                    self._view.page().runJavaScript(
+                        f"window.scrollBy(0, {-delta * 0.5});"
+                    )
+                return True
+            return False
+
+        # ── keyboard: all allowed windows ──
         if event.type() == QEvent.Type.KeyPress:
             if not self._is_event_for_this_window(obj):
                 return False

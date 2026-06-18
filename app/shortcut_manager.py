@@ -79,10 +79,13 @@ class ShortcutManager(QObject):
             win = obj.window()
             if win is not self._window and win in self._allowed_windows:
                 delta = event.angleDelta().y()
-                if delta != 0:
-                    self._view.page().runJavaScript(
-                        f"window.scrollBy(0, {-delta * 0.5});"
-                    )
+                if delta != 0 and self._view is not None:
+                    try:
+                        self._view.page().runJavaScript(
+                            f"window.scrollBy(0, {-delta * 0.5});"
+                        )
+                    except Exception:
+                        pass
                 return True
             return False
 

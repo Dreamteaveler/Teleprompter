@@ -173,7 +173,6 @@ class ControlPanel(QWidget):
             "QPushButton { background: rgba(255,255,255,0.08); border: 1px solid #444; color: #bbb; font-size: 20px; font-weight: 600; border-radius: 10px; }"
             "QPushButton:hover { color: #fff; background: rgba(220,60,60,0.2); border-color: rgba(220,60,60,0.5); }"
         )
-        close_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         close_btn.clicked.connect(self.hide)
         title_bar.addWidget(close_btn)
         layout.addLayout(title_bar)
@@ -183,12 +182,11 @@ class ControlPanel(QWidget):
         btn_row.setSpacing(8)
 
         back_btn = QPushButton("← 返回")
-        back_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        back_btn.clicked.connect(self.back_requested.emit)<｜end▁of▁thinking｜>```python
-        reset_btn = QPushButton("↺ 重置")
-        reset_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        reset_btn.clicked.connect(self.reset_requested.emit)
+        back_btn.clicked.connect(self.back_requested.emit)
         btn_row.addWidget(back_btn)
+
+        reset_btn = QPushButton("↺ 重置")
+        reset_btn.clicked.connect(self.reset_requested.emit)
         btn_row.addWidget(reset_btn)
 
         layout.addLayout(btn_row)
@@ -196,7 +194,6 @@ class ControlPanel(QWidget):
         # ─── Play / Pause button ────────────────────
         self._play_btn = QPushButton("▶ 播放  (空格)")
         self._play_btn.setObjectName("playBtn")
-        self._play_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._play_btn.clicked.connect(self.play_pause_requested.emit)
         layout.addWidget(self._play_btn)
 
@@ -206,7 +203,7 @@ class ControlPanel(QWidget):
             "页边距", "%", self._margin_label
         ))
         self._margin_slider = QSlider(Qt.Orientation.Horizontal)
-        self._margin_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._margin_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self._margin_slider.setRange(0, 40)
         self._margin_slider.setValue(5)
         self._margin_slider.valueChanged.connect(self._on_margin_changed)
@@ -218,7 +215,7 @@ class ControlPanel(QWidget):
             "字号", "px", self._font_size_label
         ))
         self._font_size_slider = QSlider(Qt.Orientation.Horizontal)
-        self._font_size_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._font_size_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self._font_size_slider.setRange(50, 250)
         self._font_size_slider.setValue(120)
         self._font_size_slider.valueChanged.connect(self._on_font_size_changed)
@@ -230,7 +227,7 @@ class ControlPanel(QWidget):
             "行距", "", self._line_spacing_label
         ))
         self._line_spacing_slider = QSlider(Qt.Orientation.Horizontal)
-        self._line_spacing_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._line_spacing_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self._line_spacing_slider.setRange(10, 30)
         self._line_spacing_slider.setValue(12)
         self._line_spacing_slider.valueChanged.connect(self._on_line_spacing_changed)
@@ -242,7 +239,7 @@ class ControlPanel(QWidget):
             "播放速度", "WPM", self._speed_label
         ))
         self._speed_slider = QSlider(Qt.Orientation.Horizontal)
-        self._speed_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._speed_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self._speed_slider.setRange(0, 100)
         self._speed_slider.setValue(15)
         self._speed_slider.valueChanged.connect(self._on_speed_changed)
@@ -260,7 +257,6 @@ class ControlPanel(QWidget):
         layout.addLayout(reading_line_layout)
 
         self._reading_line_btn = QPushButton("关闭引导框")
-        self._reading_line_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._reading_line_btn.clicked.connect(self.reading_line_toggled.emit)
         layout.addWidget(self._reading_line_btn)
 
@@ -270,7 +266,7 @@ class ControlPanel(QWidget):
             "引导框透明度", "", self._rl_opacity_label
         ))
         self._rl_opacity_slider = QSlider(Qt.Orientation.Horizontal)
-        self._rl_opacity_slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._rl_opacity_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self._rl_opacity_slider.setRange(10, 100)
         self._rl_opacity_slider.setValue(100)
         self._rl_opacity_slider.valueChanged.connect(self._on_rl_opacity_changed)
@@ -288,7 +284,6 @@ class ControlPanel(QWidget):
         layout.addLayout(mirror_layout)
 
         self._mirror_btn = QPushButton("开启镜像")
-        self._mirror_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._mirror_btn.clicked.connect(self.mirror_toggled.emit)
         layout.addWidget(self._mirror_btn)
 
@@ -299,14 +294,12 @@ class ControlPanel(QWidget):
         self._hflip_btn = QPushButton("水平翻转: 开")
         self._hflip_btn.setCheckable(True)
         self._hflip_btn.setChecked(True)
-        self._hflip_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._hflip_btn.clicked.connect(self._on_hflip_toggled)
         flip_row.addWidget(self._hflip_btn)
 
         self._vflip_btn = QPushButton("垂直翻转: 关")
         self._vflip_btn.setCheckable(True)
         self._vflip_btn.setChecked(False)
-        self._vflip_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._vflip_btn.clicked.connect(self._on_vflip_toggled)
         flip_row.addWidget(self._vflip_btn)
 

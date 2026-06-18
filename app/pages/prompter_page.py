@@ -321,6 +321,9 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.horizontal_flip_toggled.connect(self._on_horizontal_flip_toggled)
             self._control_panel.vertical_flip_toggled.connect(self._on_vertical_flip_toggled)
 
+        if self._shortcut_mgr is not None and self._control_panel is not None:
+            self._shortcut_mgr.add_allowed_window(self._control_panel)
+
         self._control_panel.set_font_size(self._font_size)
         self._control_panel.set_line_spacing(self._line_spacing)
         self._control_panel.set_speed(self._wpm)

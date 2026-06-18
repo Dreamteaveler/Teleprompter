@@ -17,6 +17,7 @@ class ShortcutManager(QObject):
         super().__init__()
         self._window = window
         self._view = view
+        self._allowed_windows = {window}
         self._shortcuts = {}
         self._release_shortcuts = {}
         self._double_click_handler = None
@@ -45,9 +46,12 @@ class ShortcutManager(QObject):
 
     def _is_event_for_this_window(self, obj):
         try:
-            return obj.window() is self._window
+            return obj.window() in self._allowed_windows
         except Exception:
             return False
+
+    def add_allowed_window(self, win):
+        self._allowed_windows.add(win)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:

@@ -315,7 +315,7 @@ class EditorPage(QWidget):
         saved_pos = saved_cursor.position()
         saved_anchor = saved_cursor.anchor()
         cursor = self._content_edit.textCursor()
-        cursor.select(QTextCursor.Document)
+        cursor.select(QTextCursor.SelectionType.Document)
         fmt = QTextCharFormat()
         fmt.setFontPointSize(value)
         cursor.mergeCharFormat(fmt)

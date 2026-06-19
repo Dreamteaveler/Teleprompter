@@ -317,7 +317,6 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.speed_changed.connect(self._on_speed_changed)
             self._control_panel.margin_changed.connect(self._on_margin_changed)
             self._control_panel.mirror_toggled.connect(self._toggle_mirror)
-            self._control_panel.reading_line_toggled.connect(self._toggle_reading_line)
             self._control_panel.reading_line_opacity_changed.connect(self._on_reading_line_opacity_changed)
             self._control_panel.edit_requested.connect(self._on_edit_requested)
             self._control_panel.horizontal_flip_toggled.connect(self._on_horizontal_flip_toggled)
@@ -360,7 +359,6 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.set_speed(self._wpm)
             self._control_panel.set_margin(self._margin)
             self._control_panel.set_mirror_state(self._is_mirror_open)
-            self._control_panel.set_reading_line_state(self._reading_line_visible)
             self._control_panel.set_reading_line_opacity(self._reading_line_opacity)
             self._control_panel.set_horizontal_flip(self._horizontal_flip)
             self._control_panel.set_vertical_flip(self._vertical_flip)
@@ -380,7 +378,6 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.set_speed(self._wpm)
             self._control_panel.set_margin(self._margin)
             self._control_panel.set_mirror_state(self._is_mirror_open)
-            self._control_panel.set_reading_line_state(self._reading_line_visible)
             self._control_panel.set_reading_line_opacity(self._reading_line_opacity)
             self._control_panel.set_horizontal_flip(self._horizontal_flip)
             self._control_panel.set_vertical_flip(self._vertical_flip)
@@ -433,8 +430,6 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._reading_line_visible = not self._reading_line_visible
         self._save_settings()
         self._update_reading_line()
-        if self._control_panel:
-            self._control_panel.set_reading_line_state(self._reading_line_visible)
         if self._is_mirror_open and self._mirror_window:
             self._mirror_window.set_reading_line_visibility(self._reading_line_visible)
 
@@ -500,7 +495,6 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.set_speed(self._wpm)
             self._control_panel.set_margin(self._margin)
             self._control_panel.set_mirror_state(self._is_mirror_open)
-            self._control_panel.set_reading_line_state(self._reading_line_visible)
             self._control_panel.set_reading_line_opacity(self._reading_line_opacity)
             self._control_panel.set_horizontal_flip(self._horizontal_flip)
             self._control_panel.set_vertical_flip(self._vertical_flip)

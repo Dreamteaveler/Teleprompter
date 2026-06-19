@@ -22,7 +22,6 @@ class ControlPanel(QWidget):
     speed_changed = pyqtSignal(int)
     margin_changed = pyqtSignal(int)
     mirror_toggled = pyqtSignal()
-    reading_line_toggled = pyqtSignal()
     reading_line_opacity_changed = pyqtSignal(float)
     edit_requested = pyqtSignal()
     horizontal_flip_toggled = pyqtSignal(bool)
@@ -250,21 +249,6 @@ class ControlPanel(QWidget):
         self._speed_slider.valueChanged.connect(self._on_speed_changed)
         layout.addWidget(self._speed_slider)
 
-        # ─── Reading Line Toggle ────────────────────
-        reading_line_layout = QHBoxLayout()
-        reading_line_title = QLabel("引导框")
-        reading_line_title.setObjectName("sectionLabel")
-        reading_line_layout.addWidget(reading_line_title)
-        reading_line_layout.addStretch()
-        self._reading_line_label = QLabel("已开启")
-        self._reading_line_label.setObjectName("valueLabel")
-        reading_line_layout.addWidget(self._reading_line_label)
-        layout.addLayout(reading_line_layout)
-
-        self._reading_line_btn = QPushButton("关闭引导框")
-        self._reading_line_btn.clicked.connect(self.reading_line_toggled.emit)
-        layout.addWidget(self._reading_line_btn)
-
         # ─── Reading Line Opacity ───────────────────
         self._rl_opacity_label = QLabel("100%")
         layout.addLayout(self._make_section_row(
@@ -272,7 +256,7 @@ class ControlPanel(QWidget):
         ))
         self._rl_opacity_slider = QSlider(Qt.Orientation.Horizontal)
         self._rl_opacity_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        self._rl_opacity_slider.setRange(10, 100)
+        self._rl_opacity_slider.setRange(0, 100)
         self._rl_opacity_slider.setValue(100)
         self._rl_opacity_slider.valueChanged.connect(self._on_rl_opacity_changed)
         layout.addWidget(self._rl_opacity_slider)
@@ -427,14 +411,6 @@ class ControlPanel(QWidget):
         else:
             self._mirror_label.setText("已关闭")
             self._mirror_btn.setText("开启镜像")
-
-    def set_reading_line_state(self, active: bool):
-        if active:
-            self._reading_line_label.setText("已开启")
-            self._reading_line_btn.setText("关闭引导框")
-        else:
-            self._reading_line_label.setText("已关闭")
-            self._reading_line_btn.setText("开启引导框")
 
     def _on_rl_opacity_changed(self, value):
         self._rl_opacity_label.setText(f"{value}%")

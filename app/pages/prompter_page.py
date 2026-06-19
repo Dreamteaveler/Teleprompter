@@ -104,7 +104,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._horizontal_flip = get_setting("horizontal_flip", "true") == "true"
         self._vertical_flip = get_setting("vertical_flip", "false") == "true"
         self._reading_line_visible = get_setting("reading_line_visible", "true") == "true"
-        self._reading_line_opacity = float(get_setting("reading_line_opacity", "1.0"))
+        self._reading_line_opacity = float(get_setting("reading_line_opacity", "0.8"))
 
     def _save_settings(self):
         set_setting("font_size", str(self._font_size))

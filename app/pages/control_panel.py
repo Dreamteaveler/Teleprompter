@@ -250,14 +250,14 @@ class ControlPanel(QWidget):
         layout.addWidget(self._speed_slider)
 
         # ─── Reading Line Opacity ───────────────────
-        self._rl_opacity_label = QLabel("100%")
+        self._rl_opacity_label = QLabel("80%")
         layout.addLayout(self._make_section_row(
             "引导框透明度", "", self._rl_opacity_label
         ))
         self._rl_opacity_slider = QSlider(Qt.Orientation.Horizontal)
         self._rl_opacity_slider.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self._rl_opacity_slider.setRange(0, 100)
-        self._rl_opacity_slider.setValue(100)
+        self._rl_opacity_slider.setValue(80)
         self._rl_opacity_slider.valueChanged.connect(self._on_rl_opacity_changed)
         layout.addWidget(self._rl_opacity_slider)
 

@@ -311,7 +311,17 @@ class EditorPage(QWidget):
 
     def _on_editor_font_changed(self, value):
         self._editor_font_label.setText(str(value))
-        self._content_edit.setFontPointSize(value)
+        saved_cursor = self._content_edit.textCursor()
+        saved_pos = saved_cursor.position()
+        saved_anchor = saved_cursor.anchor()
+        cursor = self._content_edit.textCursor()
+        cursor.select(QTextCursor.Document)
+        fmt = QTextCharFormat()
+        fmt.setFontPointSize(value)
+        cursor.mergeCharFormat(fmt)
+        saved_cursor.setPosition(saved_anchor)
+        saved_cursor.setPosition(saved_pos, QTextCursor.MoveMode.KeepAnchor)
+        self._content_edit.setTextCursor(saved_cursor)
 
     def _apply_chinese_formatting(self):
         doc = self._content_edit.document()

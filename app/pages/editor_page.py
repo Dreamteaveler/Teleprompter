@@ -8,7 +8,7 @@
 #
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QLineEdit, QTextEdit,
+    QLineEdit, QTextEdit, QSlider,
     QFileDialog, QMessageBox,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -89,6 +89,21 @@ class EditorPage(QWidget):
 
         layout.addLayout(header)
 
+        # ─── Editor Font Size ───────────────────────
+        font_row = QHBoxLayout()
+        font_row.addWidget(QLabel("编辑区字号："))
+        self._editor_font_label = QLabel("14")
+        self._editor_font_label.setFixedWidth(24)
+        self._editor_font_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        font_row.addWidget(self._editor_font_label)
+        self._editor_font_slider = QSlider(Qt.Orientation.Horizontal)
+        self._editor_font_slider.setRange(8, 36)
+        self._editor_font_slider.setValue(14)
+        self._editor_font_slider.valueChanged.connect(self._on_editor_font_changed)
+        font_row.addWidget(self._editor_font_slider, 1)
+        font_row.addStretch()
+        layout.addLayout(font_row)
+
         self._content_edit = FormulaAwareTextEdit()
         self._content_edit.setObjectName("contentEdit")
         self._content_edit.setPlaceholderText(
@@ -128,6 +143,7 @@ class EditorPage(QWidget):
                     html_content, _ = import_docx_file(filepath, formula_mode="latex")
 
             self._content_edit.setHtml(html_content)
+            self._content_edit.setFontPointSize(self._editor_font_slider.value())
             self._apply_chinese_formatting()
             title = filepath.split("/")[-1].split("\\")[-1].replace(".docx", "")
             self._title_input.setText(title)
@@ -153,6 +169,7 @@ class EditorPage(QWidget):
             self._title_input.clear()
             self._content_edit.clear()
         self._content_edit.setFocus()
+        self._content_edit.setFontPointSize(self._editor_font_slider.value())
 
     def _save(self):
         title = self._title_input.text().strip()
@@ -291,6 +308,10 @@ class EditorPage(QWidget):
 
     def _on_cancel(self):
         self.cancelled.emit()
+
+    def _on_editor_font_changed(self, value):
+        self._editor_font_label.setText(str(value))
+        self._content_edit.setFontPointSize(value)
 
     def _apply_chinese_formatting(self):
         doc = self._content_edit.document()

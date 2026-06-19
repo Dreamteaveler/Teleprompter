@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec file for 提词器 (Teleprompter) v1.08
+# PyInstaller spec file for 提词器 (Teleprompter) v1.09
 # 生成单个可执行文件
 
 import os
@@ -91,7 +91,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="提词器1.08",
+    name="提词器1.09",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

@@ -8,7 +8,7 @@
 # 修改后按 GPL-3.0-or-later 分发。
 #
 
-__version__ = "1.08"
+__version__ = "1.09"
 
 import sys
 import io

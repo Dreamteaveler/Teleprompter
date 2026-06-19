@@ -24,6 +24,7 @@ class ControlPanel(QWidget):
     mirror_toggled = pyqtSignal()
     reading_line_toggled = pyqtSignal()
     reading_line_opacity_changed = pyqtSignal(float)
+    edit_requested = pyqtSignal()
     horizontal_flip_toggled = pyqtSignal(bool)
     vertical_flip_toggled = pyqtSignal(bool)
 
@@ -184,6 +185,10 @@ class ControlPanel(QWidget):
         back_btn = QPushButton("← 返回")
         back_btn.clicked.connect(self.back_requested.emit)
         btn_row.addWidget(back_btn)
+
+        edit_btn = QPushButton("✎ 编辑")
+        edit_btn.clicked.connect(self.edit_requested.emit)
+        btn_row.addWidget(edit_btn)
 
         reset_btn = QPushButton("↺ 重置")
         reset_btn.clicked.connect(self.reset_requested.emit)

@@ -43,6 +43,8 @@ class MainWindow(QMainWindow):
         self._stack.addWidget(self._editor)
 
         self._resizing = False
+        self._editing_from_prompter = False
+        self._edit_scroll_ratio = 0.0
 
         self._connect_signals()
 
@@ -52,9 +54,10 @@ class MainWindow(QMainWindow):
 
         self._prompter.back_to_home.connect(self._on_back_to_home)
         self._prompter.completed.connect(self._on_prompter_completed)
+        self._prompter.edit_current_manuscript.connect(self._on_edit_current)
 
         self._editor.saved.connect(self._on_editor_saved)
-        self._editor.cancelled.connect(self._on_back_to_home)
+        self._editor.cancelled.connect(self._on_editor_cancelled)
 
     def _on_navigate_to_prompter(self, manuscript_id: int):
         manuscript = get_manuscript(manuscript_id)
@@ -71,8 +74,38 @@ class MainWindow(QMainWindow):
         self._stack.setCurrentIndex(self.PAGE_HOME)
         self._home.refresh()
 
+    def _on_edit_current(self, manuscript_id: int, scroll_ratio: float):
+        manuscript = get_manuscript(manuscript_id)
+        if not manuscript:
+            return
+        self._editing_from_prompter = True
+        self._edit_scroll_ratio = scroll_ratio
+        self._editor.load_manuscript(manuscript)
+        self._stack.setCurrentIndex(self.PAGE_EDITOR)
+
     def _on_editor_saved(self, manuscript_id: int):
-        self._on_back_to_home()
+        if self._editing_from_prompter:
+            self._editing_from_prompter = False
+            manuscript = get_manuscript(manuscript_id)
+            if manuscript:
+                self._prompter.load_manuscript(manuscript)
+            self._stack.setCurrentIndex(self.PAGE_PROMPTER)
+            self._restore_prompter_scroll()
+        else:
+            self._on_back_to_home()
+
+    def _on_editor_cancelled(self):
+        if self._editing_from_prompter:
+            self._editing_from_prompter = False
+            self._stack.setCurrentIndex(self.PAGE_PROMPTER)
+        else:
+            self._on_back_to_home()
+
+    def _restore_prompter_scroll(self):
+        if self._edit_scroll_ratio <= 0:
+            return
+        self._prompter._pending_scroll_ratio = self._edit_scroll_ratio
+        self._prompter._scroll_position = self._edit_scroll_ratio * max(1, self._prompter._scroll_height)
 
     def _on_prompter_completed(self):
         self._stack.setCurrentIndex(self.PAGE_HOME)

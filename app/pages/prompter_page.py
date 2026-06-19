@@ -40,6 +40,7 @@ def _get_html_template() -> str:
 class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
     back_to_home = pyqtSignal()
     completed = pyqtSignal()
+    edit_current_manuscript = pyqtSignal(int, float)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -318,6 +319,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.mirror_toggled.connect(self._toggle_mirror)
             self._control_panel.reading_line_toggled.connect(self._toggle_reading_line)
             self._control_panel.reading_line_opacity_changed.connect(self._on_reading_line_opacity_changed)
+            self._control_panel.edit_requested.connect(self._on_edit_requested)
             self._control_panel.horizontal_flip_toggled.connect(self._on_horizontal_flip_toggled)
             self._control_panel.vertical_flip_toggled.connect(self._on_vertical_flip_toggled)
 
@@ -445,6 +447,13 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         )
         if self._is_mirror_open and self._mirror_window:
             self._mirror_window.set_reading_line_opacity(opacity)
+
+    def _on_edit_requested(self):
+        if not self._manuscript:
+            return
+        ratio = self._scroll_position / max(1, self._scroll_height)
+        self._pause()
+        self.edit_current_manuscript.emit(self._manuscript.id, ratio)
 
     def _on_back(self):
         self._pause()

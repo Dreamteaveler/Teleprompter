@@ -8,7 +8,7 @@
 #
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QSlider, QProgressBar, QFrame,
+    QSlider, QProgressBar, QFrame, QApplication,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -173,7 +173,7 @@ class ControlPanel(QWidget):
             "QPushButton { background: rgba(255,255,255,0.08); border: 1px solid #444; color: #bbb; font-size: 20px; font-weight: 600; border-radius: 10px; }"
             "QPushButton:hover { color: #fff; background: rgba(220,60,60,0.2); border-color: rgba(220,60,60,0.5); }"
         )
-        close_btn.clicked.connect(self.hide)
+        close_btn.clicked.connect(QApplication.quit)
         title_bar.addWidget(close_btn)
         layout.addLayout(title_bar)
 

@@ -140,4 +140,8 @@ class MainWindow(QMainWindow):
             self._prompter._save_settings()
         except Exception:
             pass
+        if self._prompter._mirror_window:
+            self._prompter._mirror_window.close()
+        if self._prompter._control_panel:
+            self._prompter._control_panel.close()
         event.accept()

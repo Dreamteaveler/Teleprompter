@@ -129,7 +129,22 @@ class MirrorWindow(QMainWindow):
         sx = (-1 if self._hflip else 1) * self._mirror_scale
         sy = (-1 if self._vflip else 1) * self._mirror_scale
         cw = int(self._view.width() / max(0.01, self._mirror_scale))
-        flip_tag = _FLIP_CSS.format(sx=sx, sy=sy, cw=cw)
+        m = re.search(r'padding:(\d+)px\s+(\d+)px\s+(\d+)px\s+(\d+)px', html)
+        if m:
+            pt, pr, pb, pl = m.group(1), m.group(2), m.group(3), m.group(4)
+            flip_tag = (
+                f'<style>'
+                f'.flip-wrapper{{'
+                f'padding:{pt}px {pr}px {pb}px {pl}px;'
+                f'width:{cw}px;min-height:100vh;'
+                f'transform:scale({sx},{sy});transform-origin:0 0;'
+                f'}}'
+                f'body{{padding:0!important;}}'
+                f'#rl{{pointer-events:none !important;cursor:default !important;}}'
+                f'</style>'
+            )
+        else:
+            flip_tag = _FLIP_CSS.format(sx=sx, sy=sy, cw=cw)
         html = re.sub(r'(</head>)', flip_tag + r'\1', html)
         html = re.sub(r'(<body[^>]*>)', r'\1<div class="flip-wrapper">', html)
         html = re.sub(r'(<div\s+id="rl"[^>]*>)', r'</div>\1', html)

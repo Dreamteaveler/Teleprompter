@@ -90,7 +90,6 @@ class MirrorSyncMixin:
         self._mirror_window.showNormal()
         self._is_mirror_open = True
         self._mirror_mode = True
-        self._save_settings()
         if self._manuscript:
             self._sync_mirror_content(keep_scroll=False)
         self._start_sync_timer()
@@ -101,7 +100,6 @@ class MirrorSyncMixin:
         self._is_mirror_open = False
         if remember:
             self._mirror_mode = False
-            self._save_settings()
         self._stop_sync_timer()
         if self._mirror_window:
             self._mirror_window.close()
@@ -112,7 +110,6 @@ class MirrorSyncMixin:
         self._mirror_window = None
         self._is_mirror_open = False
         self._mirror_mode = False
-        self._save_settings()
         self._stop_sync_timer()
         if self._control_panel:
             self._control_panel.set_mirror_state(False)
@@ -127,7 +124,6 @@ class MirrorSyncMixin:
         self._horizontal_flip = enabled
         if enabled:
             self._vertical_flip = False
-        self._save_settings()
         if self._is_mirror_open and self._mirror_window:
             self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip, rebuild=False)
             self._sync_mirror_content()
@@ -136,7 +132,6 @@ class MirrorSyncMixin:
         self._vertical_flip = enabled
         if enabled:
             self._horizontal_flip = False
-        self._save_settings()
         if self._is_mirror_open and self._mirror_window:
             self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip, rebuild=False)
             self._sync_mirror_content()

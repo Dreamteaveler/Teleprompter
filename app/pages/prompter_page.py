@@ -281,12 +281,10 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
                 self._auto_resume = True
             self._pause()
             self._load_content(self._manuscript.content, keep_scroll=True)
-        self._save_settings()
         QTimer.singleShot(150, lambda: self._sync_mirror_if_open(keep_scroll=True))
 
     def _on_line_spacing_changed(self, value: int):
         self._line_spacing = value / 10.0
-        self._save_settings()
         if self._manuscript:
             was_playing = self._is_playing
             if was_playing:
@@ -297,7 +295,6 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
 
     def _on_margin_changed(self, value: int):
         self._margin = value
-        self._save_settings()
         if self._manuscript:
             was_playing = self._is_playing
             if was_playing:
@@ -428,14 +425,12 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
 
     def _toggle_reading_line(self):
         self._reading_line_visible = not self._reading_line_visible
-        self._save_settings()
         self._update_reading_line()
         if self._is_mirror_open and self._mirror_window:
             self._mirror_window.set_reading_line_visibility(self._reading_line_visible)
 
     def _on_reading_line_opacity_changed(self, opacity: float):
         self._reading_line_opacity = opacity
-        self._save_settings()
         color = f"rgba(219,157,22,{opacity})"
         self._view.page().runJavaScript(
             'var rl=document.getElementById("rl");if(rl){rl.style.borderColor="' + color + '";}'
@@ -507,6 +502,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             QTimer.singleShot(400, self._open_mirror)
 
     def hideEvent(self, event):
+        self._save_settings()
         super().hideEvent(event)
         if self._shortcut_mgr is not None:
             self._shortcut_mgr.uninstall()

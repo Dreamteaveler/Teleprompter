@@ -82,7 +82,6 @@ class PlaybackMixin:
 
     def _on_speed_changed(self, value: int):
         self._wpm = value
-        self._save_settings()
         if self._is_playing:
             chars_per_minute = self._wpm * 2.5
             self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
@@ -92,7 +91,6 @@ class PlaybackMixin:
     def _speed_up(self):
         new_wpm = min(200, self._wpm + 2)
         self._wpm = new_wpm
-        self._save_settings()
         if self._is_playing:
             chars_per_minute = self._wpm * 2.5
             self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
@@ -102,7 +100,6 @@ class PlaybackMixin:
     def _speed_down(self):
         new_wpm = max(0, self._wpm - 2)
         self._wpm = new_wpm
-        self._save_settings()
         if self._is_playing:
             chars_per_minute = self._wpm * 2.5
             self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6

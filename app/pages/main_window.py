@@ -134,3 +134,10 @@ class MainWindow(QMainWindow):
         self.resize(QSize(sz.width(), new_h))
         self._resizing = False
         super().resizeEvent(event)
+
+    def closeEvent(self, event):
+        try:
+            self._prompter._save_settings()
+        except Exception:
+            pass
+        event.accept()

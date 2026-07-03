@@ -100,6 +100,14 @@ class MirrorWindow(QMainWindow):
                 f"window.scrollTo(0, {scroll_y})"
             )
 
+    def sync_scroll_pct(self, ratio: float):
+        self._pending_scroll_y = ratio
+        js = (
+            "var maxY=document.documentElement.scrollHeight-window.innerHeight;"
+            + f"var target=maxY*{ratio};window.scrollTo(0,Math.max(0,target));"
+        )
+        self._view.page().runJavaScript(js)
+
     #  ── 引导框同步 ──
     #  #rl 是 body 的直接子元素，position:fixed 相对真实视口。
     #  水平模式：rl.style.top = y（主屏坐标直接使用）

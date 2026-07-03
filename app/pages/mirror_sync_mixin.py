@@ -95,6 +95,7 @@ class MirrorSyncMixin:
         self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip)
         self._mirror_window.showNormal()
         self._position_mirror_on_secondary()
+        QTimer.singleShot(200, self._update_mirror_scale)
         self._is_mirror_open = True
         self._mirror_mode = True
         if self._manuscript:
@@ -188,24 +189,25 @@ class MirrorSyncMixin:
         self._sync_version += 1
         version = self._sync_version
         self._view.page().runJavaScript(
-            "[window.pageYOffset, window.getReadingLineTop ? window.getReadingLineTop() : (window.innerHeight/3), (document.getElementById('rl')||{}).offsetHeight||0]",
+            "[window.pageYOffset, document.documentElement.scrollHeight - window.innerHeight, window.getReadingLineTop ? window.getReadingLineTop() : (window.innerHeight/3), (document.getElementById('rl')||{}).offsetHeight||0]",
             lambda result: self._on_sync_position(result, version)
         )
 
-    #  ── 纯坐标缩放，无额外变换 ──
-    #  scroll_y × scale → 保证不同分辨率每行文字对齐
-    #  rl_y × scale    → 引导框位置等比缩放
-    #  rl_h × scale    → 引导框高度等比缩放
+    #  ── 百分比同步（兼容不同分辨率下的折行差异） ──
+    #  主屏百分比 = scrollY / maxY → 镜像 scrollY = 百分比 × mirror_maxY
+    #  引导框仍然用像素坐标，CSS transform 方案保证一致性
     def _on_sync_position(self, result, version):
         if version != self._sync_version:
             return
         if result is None:
             return
         scroll_y = float(result[0]) if result[0] is not None else self._scroll_position
-        rl_y = float(result[1]) if len(result) > 1 and result[1] is not None else 0
-        rl_h = float(result[2]) if len(result) > 2 and result[2] is not None else 0
+        max_y = float(result[1]) if len(result) > 1 and result[1] is not None else 1
+        rl_y = float(result[2]) if len(result) > 2 and result[2] is not None else 0
+        rl_h = float(result[3]) if len(result) > 3 and result[3] is not None else 0
         self._scroll_position = scroll_y
         self._accumulated_scroll = scroll_y
-        if self._mirror_window:
-            self._mirror_window.sync_scroll(scroll_y)
+        if self._mirror_window and max_y > 0:
+            ratio = scroll_y / max_y
+            self._mirror_window.sync_scroll_pct(ratio)
             self._mirror_window.set_reading_line(rl_y, rl_h)

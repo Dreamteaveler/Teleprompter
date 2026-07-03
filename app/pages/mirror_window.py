@@ -52,7 +52,7 @@ class MirrorWindow(QMainWindow):
         self._reading_line_visible: bool = True
         self._reading_line_opacity: float = 1.0
         self._mirror_scale: float = 1.0
-        self._padding_px: int = 0
+        self._padding: tuple = (0, 0, 0)
 
         self._view = QWebEngineView()
         self._view.setStyleSheet("background-color: #0d0d0d; border: none;")
@@ -65,12 +65,12 @@ class MirrorWindow(QMainWindow):
         self._view.loadFinished.connect(self._on_page_loaded)
         self.setCentralWidget(self._view)
 
-    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0, padding_px: int = 0):
+    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0, padding: tuple = (0, 0, 0)):
         self._content_html = full_html
         self._pending_scroll_y = scroll_y
         self._pending_rl_y = rl_y
         self._mirror_scale = scale
-        self._padding_px = padding_px
+        self._padding = padding
         self._load_html()
 
     def view_width(self) -> int:
@@ -135,9 +135,7 @@ class MirrorWindow(QMainWindow):
         sx_flip = -1 if self._hflip else 1
         sy_flip = -1 if self._vflip else 1
         cw = int(self._view.width() / max(0.01, scale))
-        px = self._padding_px
-        pt = int(self._padding_px * 0.6) if self._padding_px else 0
-        pb = int(self._padding_px * 3) if self._padding_px else 0
+        pt, px, pb = self._padding
         flip_tag = (
             f'<style>'
             f'body{{padding:0!important;}}'

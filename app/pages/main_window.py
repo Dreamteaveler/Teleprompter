@@ -7,7 +7,7 @@
 # 修改后按 GPL-3.0-or-later 分发。
 #
 from PyQt6.QtWidgets import (
-    QMainWindow, QStackedWidget,
+    QMainWindow, QStackedWidget, QMessageBox,
 )
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QKeyEvent
@@ -136,6 +136,14 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
 
     def closeEvent(self, event):
+        reply = QMessageBox.question(
+            self, "退出确认", "确定要退出提词器吗？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            event.ignore()
+            return
         try:
             self._prompter._save_settings()
         except Exception:

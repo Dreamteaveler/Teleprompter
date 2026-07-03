@@ -52,6 +52,7 @@ class MirrorWindow(QMainWindow):
         self._reading_line_visible: bool = True
         self._reading_line_opacity: float = 1.0
         self._mirror_scale: float = 1.0
+        self._padding_px: int = 0
 
         self._view = QWebEngineView()
         self._view.setStyleSheet("background-color: #0d0d0d; border: none;")
@@ -64,11 +65,12 @@ class MirrorWindow(QMainWindow):
         self._view.loadFinished.connect(self._on_page_loaded)
         self.setCentralWidget(self._view)
 
-    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0):
+    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0, padding_px: int = 0):
         self._content_html = full_html
         self._pending_scroll_y = scroll_y
         self._pending_rl_y = rl_y
         self._mirror_scale = scale
+        self._padding_px = padding_px
         self._load_html()
 
     def view_width(self) -> int:
@@ -133,30 +135,24 @@ class MirrorWindow(QMainWindow):
         sx_flip = -1 if self._hflip else 1
         sy_flip = -1 if self._vflip else 1
         cw = int(self._view.width() / max(0.01, scale))
-        m = re.search(r'padding:(\d+)px\s+(\d+)px\s+(\d+)px\s+(\d+)px', html)
-        if m:
-            pt, pr, pb, pl = m.group(1), m.group(2), m.group(3), m.group(4)
-            flip_tag = (
-                f'<style>'
-                f'body{{padding:0!important;}}'
-                f'.flip-outer{{'
-                f'transform:scale({scale},{scale});transform-origin:0 0;'
-                f'width:{cw}px;min-height:100vh;'
-                f'}}'
-                f'.flip-inner{{'
-                f'transform:scale({sx_flip},{sy_flip});transform-origin:50% 50%;'
-                f'width:100%;height:100%;'
-                f'padding:{pt}px {pr}px {pb}px {pl}px;'
-                f'}}'
-                f'#rl{{pointer-events:none !important;cursor:default !important;}}'
-                f'</style>'
-            )
-        else:
-            sx = scale
-            fy = (-1 if self._hflip else 1)
-            if self._vflip:
-                fy = -fy
-            flip_tag = _FLIP_CSS.format(sx=sx, fy=fy, cw=cw)
+        px = self._padding_px
+        pt = int(self._padding_px * 0.6) if self._padding_px else 0
+        pb = int(self._padding_px * 3) if self._padding_px else 0
+        flip_tag = (
+            f'<style>'
+            f'body{{padding:0!important;}}'
+            f'.flip-outer{{'
+            f'transform:scale({scale},{scale});transform-origin:0 0;'
+            f'width:{cw}px;min-height:100vh;'
+            f'}}'
+            f'.flip-inner{{'
+            f'transform:scale({sx_flip},{sy_flip});transform-origin:50% 50%;'
+            f'width:100%;height:100%;'
+            f'padding:{pt}px {px}px {pb}px {px}px;'
+            f'}}'
+            f'#rl{{pointer-events:none !important;cursor:default !important;}}'
+            f'</style>'
+        )
         html = re.sub(r'(</head>)', flip_tag + r'\1', html)
         html = re.sub(
             r'(<body[^>]*>)',

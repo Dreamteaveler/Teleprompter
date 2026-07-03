@@ -8,7 +8,7 @@
 #
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QSlider, QProgressBar, QFrame, QApplication,
+    QSlider, QProgressBar, QFrame,
 )
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -24,6 +24,7 @@ class ControlPanel(QWidget):
     mirror_toggled = pyqtSignal()
     reading_line_opacity_changed = pyqtSignal(float)
     edit_requested = pyqtSignal()
+    close_requested = pyqtSignal()
     horizontal_flip_toggled = pyqtSignal(bool)
     vertical_flip_toggled = pyqtSignal(bool)
 
@@ -174,7 +175,7 @@ class ControlPanel(QWidget):
             "QPushButton:hover { color: #fff; background: #e81123; border-color: #e81123; }"
         )
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        close_btn.clicked.connect(QApplication.quit)
+        close_btn.clicked.connect(self.close_requested.emit)
         title_bar.addWidget(close_btn)
         layout.addLayout(title_bar)
 

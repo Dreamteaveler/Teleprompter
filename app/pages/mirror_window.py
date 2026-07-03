@@ -20,10 +20,13 @@ ASPECT_RATIO = 16.0 / 9.0
 
 _FLIP_CSS = (
     '<style>'
-    ''
-    '.flip-wrapper{{'
+    '.flip-outer{{'
+    'transform:scale({sx},{sx});transform-origin:0 0;'
     'width:{cw}px;min-height:100vh;'
-    'transform:scale({sx},{sy});transform-origin:0 0;'
+    '}}'
+    '.flip-inner{{'
+    'transform:scale({fy},{fy});transform-origin:50% 50%;'
+    'width:100%;height:100%;'
     '}}'
     '#rl{{pointer-events:none !important;cursor:default !important;}}'
     '</style>'
@@ -126,28 +129,40 @@ class MirrorWindow(QMainWindow):
 
     def _load_html(self):
         html = self._content_html
-        sx = (-1 if self._hflip else 1) * self._mirror_scale
-        sy = (-1 if self._vflip else 1) * self._mirror_scale
-        cw = int(self._view.width() / max(0.01, self._mirror_scale))
+        scale = self._mirror_scale
+        sx_flip = -1 if self._hflip else 1
+        sy_flip = -1 if self._vflip else 1
+        cw = int(self._view.width() / max(0.01, scale))
         m = re.search(r'padding:(\d+)px\s+(\d+)px\s+(\d+)px\s+(\d+)px', html)
         if m:
             pt, pr, pb, pl = m.group(1), m.group(2), m.group(3), m.group(4)
             flip_tag = (
                 f'<style>'
-                f'.flip-wrapper{{'
-                f'padding:{pt}px {pr}px {pb}px {pl}px;'
-                f'width:{cw}px;min-height:100vh;'
-                f'transform:scale({sx},{sy});transform-origin:0 0;'
-                f'}}'
                 f'body{{padding:0!important;}}'
+                f'.flip-outer{{'
+                f'transform:scale({scale},{scale});transform-origin:0 0;'
+                f'width:{cw}px;min-height:100vh;'
+                f'}}'
+                f'.flip-inner{{'
+                f'transform:scale({sx_flip},{sy_flip});transform-origin:50% 50%;'
+                f'width:100%;height:100%;'
+                f'padding:{pt}px {pr}px {pb}px {pl}px;'
+                f'}}'
                 f'#rl{{pointer-events:none !important;cursor:default !important;}}'
                 f'</style>'
             )
         else:
-            flip_tag = _FLIP_CSS.format(sx=sx, sy=sy, cw=cw)
+            sx = scale
+            fy = (-1 if self._hflip else 1)
+            if self._vflip:
+                fy = -fy
+            flip_tag = _FLIP_CSS.format(sx=sx, fy=fy, cw=cw)
         html = re.sub(r'(</head>)', flip_tag + r'\1', html)
-        html = re.sub(r'(<body[^>]*>)', r'\1<div class="flip-wrapper">', html)
-        html = re.sub(r'(<div\s+id="rl"[^>]*>)', r'</div>\1', html)
+        html = re.sub(
+            r'(<body[^>]*>)',
+            r'\1<div class="flip-outer"><div class="flip-inner">', html
+        )
+        html = re.sub(r'(<div\s+id="rl"[^>]*>)', r'</div></div>\1', html)
         self._view.setHtml(html, mathjax_base_url())
 
     def _rebuild_with_scroll(self, scroll_y: float):

@@ -319,6 +319,8 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.close_requested.connect(self._on_close_requested)
             self._control_panel.horizontal_flip_toggled.connect(self._on_horizontal_flip_toggled)
             self._control_panel.vertical_flip_toggled.connect(self._on_vertical_flip_toggled)
+            self._control_panel.fullscreen_main_requested.connect(self._on_main_fullscreen)
+            self._control_panel.fullscreen_mirror_requested.connect(self._on_mirror_fullscreen)
 
         if self._shortcut_mgr is not None and self._control_panel is not None:
             self._shortcut_mgr.add_allowed_window(self._control_panel)
@@ -413,6 +415,8 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._update_reading_line()
             QTimer.singleShot(400, lambda: setattr(win, '_resizing', False))
             QTimer.singleShot(600, lambda: self._sync_mirror_if_open())
+        if self._control_panel:
+            self._control_panel.set_main_fullscreen_state(self._is_fullscreen)
 
     def _exit_fullscreen(self):
         if self._is_fullscreen:
@@ -423,6 +427,21 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             QTimer.singleShot(400, lambda: setattr(win, '_resizing', False))
         else:
             self._on_back()
+
+    def _on_main_fullscreen(self):
+        self._toggle_fullscreen()
+        if self._control_panel:
+            self._control_panel.set_main_fullscreen_state(self._is_fullscreen)
+
+    def _on_mirror_fullscreen(self):
+        if not self._is_mirror_open or not self._mirror_window:
+            return
+        if self._mirror_window.isFullScreen():
+            self._mirror_window.showNormal()
+        else:
+            self._mirror_window.showFullScreen()
+        if self._control_panel:
+            self._control_panel.set_mirror_fullscreen_state(self._mirror_window.isFullScreen())
 
     def _toggle_reading_line(self):
         self._reading_line_visible = not self._reading_line_visible

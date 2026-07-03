@@ -8,6 +8,7 @@
 #
 """镜像同步逻辑 Mixin，由 PrompterPage 继承使用。"""
 from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication, QMessageBox
 
 from app.pages.mirror_window import MirrorWindow
 
@@ -87,6 +88,7 @@ class MirrorSyncMixin:
             self._mirror_window.destroyed.connect(self._on_mirror_closed)
             self._mirror_window.resized.connect(self._on_mirror_resized)
         self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip)
+        self._position_mirror_on_secondary()
         self._mirror_window.showNormal()
         self._is_mirror_open = True
         self._mirror_mode = True
@@ -95,6 +97,28 @@ class MirrorSyncMixin:
         self._start_sync_timer()
         if self._control_panel:
             self._control_panel.set_mirror_state(True)
+
+    def _position_mirror_on_secondary(self):
+        if not self._mirror_window:
+            return
+        app = QApplication.instance()
+        if not app:
+            return
+        screens = app.screens()
+        primary = app.primaryScreen()
+        if len(screens) < 2:
+            return
+        if len(screens) > 2:
+            QMessageBox.information(
+                self._mirror_window, "多显示器提示",
+                "检测到超过2个显示器，请手动调整镜像窗口位置。"
+            )
+            return
+        for screen in screens:
+            if screen is not primary:
+                geo = screen.availableGeometry()
+                self._mirror_window.setGeometry(geo)
+                return
 
     def _close_mirror(self, remember: bool = True):
         self._is_mirror_open = False

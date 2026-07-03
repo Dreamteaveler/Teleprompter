@@ -27,6 +27,8 @@ class ControlPanel(QWidget):
     close_requested = pyqtSignal()
     horizontal_flip_toggled = pyqtSignal(bool)
     vertical_flip_toggled = pyqtSignal(bool)
+    fullscreen_main_requested = pyqtSignal()
+    fullscreen_mirror_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -297,6 +299,21 @@ class ControlPanel(QWidget):
 
         layout.addLayout(flip_row)
 
+        # ─── Fullscreen Toggles ──────────────────────
+        fs_row = QHBoxLayout()
+        fs_row.setSpacing(8)
+        self._fs_main_btn = QPushButton("主屏全屏")
+        self._fs_main_btn.setCheckable(True)
+        self._fs_main_btn.setChecked(False)
+        self._fs_main_btn.clicked.connect(self.fullscreen_main_requested.emit)
+        fs_row.addWidget(self._fs_main_btn)
+        self._fs_mirror_btn = QPushButton("镜像全屏")
+        self._fs_mirror_btn.setCheckable(True)
+        self._fs_mirror_btn.setChecked(False)
+        self._fs_mirror_btn.clicked.connect(self.fullscreen_mirror_requested.emit)
+        fs_row.addWidget(self._fs_mirror_btn)
+        layout.addLayout(fs_row)
+
         # ─── Progress Bar ───────────────────────────
         progress_layout = QHBoxLayout()
         progress_title = QLabel("播放进度")
@@ -459,6 +476,16 @@ class ControlPanel(QWidget):
         self._vflip_btn.setChecked(enabled)
         self._vflip_btn.setText("垂直翻转: 开" if enabled else "垂直翻转: 关")
         self._vflip_btn.blockSignals(False)
+
+    def set_main_fullscreen_state(self, active: bool):
+        self._fs_main_btn.blockSignals(True)
+        self._fs_main_btn.setChecked(active)
+        self._fs_main_btn.blockSignals(False)
+
+    def set_mirror_fullscreen_state(self, active: bool):
+        self._fs_mirror_btn.blockSignals(True)
+        self._fs_mirror_btn.setChecked(active)
+        self._fs_mirror_btn.blockSignals(False)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:

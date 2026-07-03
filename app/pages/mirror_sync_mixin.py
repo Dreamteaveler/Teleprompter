@@ -88,8 +88,8 @@ class MirrorSyncMixin:
             self._mirror_window.destroyed.connect(self._on_mirror_closed)
             self._mirror_window.resized.connect(self._on_mirror_resized)
         self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip)
-        self._position_mirror_on_secondary()
         self._mirror_window.showNormal()
+        self._position_mirror_on_secondary()
         self._is_mirror_open = True
         self._mirror_mode = True
         if self._manuscript:
@@ -117,7 +117,10 @@ class MirrorSyncMixin:
         for screen in screens:
             if screen is not primary:
                 geo = screen.availableGeometry()
-                self._mirror_window.setGeometry(geo)
+                self._mirror_window.move(
+                    geo.x() + (geo.width() - self._mirror_window.width()) // 2,
+                    geo.y() + (geo.height() - self._mirror_window.height()) // 2,
+                )
                 return
 
     def _close_mirror(self, remember: bool = True):

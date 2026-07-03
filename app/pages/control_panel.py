@@ -302,12 +302,12 @@ class ControlPanel(QWidget):
         # ─── Fullscreen Toggles ──────────────────────
         fs_row = QHBoxLayout()
         fs_row.setSpacing(8)
-        self._fs_main_btn = QPushButton("主屏全屏")
+        self._fs_main_btn = QPushButton("主屏全屏：否")
         self._fs_main_btn.setCheckable(True)
         self._fs_main_btn.setChecked(False)
         self._fs_main_btn.clicked.connect(self.fullscreen_main_requested.emit)
         fs_row.addWidget(self._fs_main_btn)
-        self._fs_mirror_btn = QPushButton("镜像全屏")
+        self._fs_mirror_btn = QPushButton("镜像全屏：否")
         self._fs_mirror_btn.setCheckable(True)
         self._fs_mirror_btn.setChecked(False)
         self._fs_mirror_btn.clicked.connect(self.fullscreen_mirror_requested.emit)
@@ -480,11 +480,13 @@ class ControlPanel(QWidget):
     def set_main_fullscreen_state(self, active: bool):
         self._fs_main_btn.blockSignals(True)
         self._fs_main_btn.setChecked(active)
+        self._fs_main_btn.setText("主屏全屏：是" if active else "主屏全屏：否")
         self._fs_main_btn.blockSignals(False)
 
     def set_mirror_fullscreen_state(self, active: bool):
         self._fs_mirror_btn.blockSignals(True)
         self._fs_mirror_btn.setChecked(active)
+        self._fs_mirror_btn.setText("镜像全屏：是" if active else "镜像全屏：否")
         self._fs_mirror_btn.blockSignals(False)
 
     def mousePressEvent(self, event):

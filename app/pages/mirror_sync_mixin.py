@@ -59,11 +59,11 @@ class MirrorSyncMixin:
         if main_w > 100 and mirror_w > 100:
             self._mirror_scale = mirror_w / main_w
         self._mirror_reading_line_y = self._reading_line_y * self._mirror_scale
-        html = self._build_html(self._manuscript.content, scale=self._mirror_scale, vflip=self._vertical_flip)
-        scroll_y = self._scroll_position * self._mirror_scale if keep_scroll else 0.0
+        html = self._build_html(self._manuscript.content, scale=1.0, vflip=self._vertical_flip)
+        scroll_y = self._scroll_position if keep_scroll else 0.0
         self._mirror_window._reading_line_visible = self._reading_line_visible
         self._mirror_window._reading_line_opacity = self._reading_line_opacity
-        self._mirror_window.set_content(html, scroll_y, self._mirror_reading_line_y)
+        self._mirror_window.set_content(html, scroll_y, self._mirror_reading_line_y, self._mirror_scale)
 
     def _sync_mirror_if_open(self, keep_scroll: bool = True):
         if self._is_mirror_open and self._mirror_window:
@@ -77,6 +77,7 @@ class MirrorSyncMixin:
         if main_w > 100 and mirror_w > 100:
             self._mirror_scale = mirror_w / main_w
         self._mirror_reading_line_y = self._reading_line_y * self._mirror_scale
+        self._mirror_window.update_scale(self._mirror_scale)
 
     def _on_mirror_resized(self):
         self._update_mirror_scale()
@@ -201,6 +202,6 @@ class MirrorSyncMixin:
         rl_h = float(result[2]) if len(result) > 2 and result[2] is not None else 0
         self._scroll_position = scroll_y
         self._accumulated_scroll = scroll_y
-        if self._mirror_window and self._mirror_scale > 0:
-            self._mirror_window.sync_scroll(scroll_y * self._mirror_scale)
-            self._mirror_window.set_reading_line(rl_y * self._mirror_scale, rl_h * self._mirror_scale)
+        if self._mirror_window:
+            self._mirror_window.sync_scroll(scroll_y)
+            self._mirror_window.set_reading_line(rl_y, rl_h)

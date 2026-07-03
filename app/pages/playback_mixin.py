@@ -112,9 +112,9 @@ class PlaybackMixin:
         self._last_tick_time = time.monotonic()
         self._pause()
         self._view.page().runJavaScript("window.scrollTo(0, 0);")
-        if self._is_mirror_open and self._mirror_window and self._mirror_scale > 0:
+        if self._is_mirror_open and self._mirror_window:
             self._mirror_window.sync_scroll(0.0)
-            rlh = int(self._font_size * self._line_spacing * 3 * self._mirror_scale)
+            rlh = int(self._font_size * self._line_spacing * 3)
             self._mirror_window.set_reading_line(self._mirror_reading_line_y, rlh)
 
     def _start_scroll_up(self):

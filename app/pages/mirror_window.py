@@ -20,10 +20,10 @@ ASPECT_RATIO = 16.0 / 9.0
 
 _FLIP_CSS = (
     '<style>'
+    'body{{overflow-x:hidden;}}'
     '.flip-wrapper{{'
-    'transform:scale({sx},{sy});'
-    'transform-origin:50% 50%;'
-    'width:100%;min-height:100vh;'
+    'width:{cw}px;min-height:100vh;'
+    'transform:scale({sx},{sy});transform-origin:0 0;'
     '}}'
     '#rl{{pointer-events:none !important;cursor:default !important;}}'
     '</style>'
@@ -48,6 +48,7 @@ class MirrorWindow(QMainWindow):
         self._vflip: bool = False
         self._reading_line_visible: bool = True
         self._reading_line_opacity: float = 1.0
+        self._mirror_scale: float = 1.0
 
         self._view = QWebEngineView()
         self._view.setStyleSheet("background-color: #0d0d0d; border: none;")
@@ -60,10 +61,11 @@ class MirrorWindow(QMainWindow):
         self._view.loadFinished.connect(self._on_page_loaded)
         self.setCentralWidget(self._view)
 
-    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0):
+    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0):
         self._content_html = full_html
         self._pending_scroll_y = scroll_y
         self._pending_rl_y = rl_y
+        self._mirror_scale = scale
         self._load_html()
 
     def view_width(self) -> int:
@@ -74,6 +76,11 @@ class MirrorWindow(QMainWindow):
         self._hflip = hflip
         self._vflip = vflip
         if rebuild and changed and self._content_html:
+            self._rebuild_with_scroll(self._pending_scroll_y)
+
+    def update_scale(self, scale: float):
+        self._mirror_scale = scale
+        if self._content_html:
             self._rebuild_with_scroll(self._pending_scroll_y)
 
     def sync_scroll(self, scroll_y: float):
@@ -119,9 +126,10 @@ class MirrorWindow(QMainWindow):
 
     def _load_html(self):
         html = self._content_html
-        sx = -1 if self._hflip else 1
-        sy = -1 if self._vflip else 1
-        flip_tag = _FLIP_CSS.format(sx=sx, sy=sy)
+        sx = (-1 if self._hflip else 1) * self._mirror_scale
+        sy = (-1 if self._vflip else 1) * self._mirror_scale
+        cw = int(self._view.width() / max(0.01, self._mirror_scale))
+        flip_tag = _FLIP_CSS.format(sx=sx, sy=sy, cw=cw)
         html = re.sub(r'(</head>)', flip_tag + r'\1', html)
         html = re.sub(r'(<body[^>]*>)', r'\1<div class="flip-wrapper">', html)
         html = re.sub(r'(<div\s+id="rl"[^>]*>)', r'</div>\1', html)

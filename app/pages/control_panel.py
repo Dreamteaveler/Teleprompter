@@ -167,12 +167,13 @@ class ControlPanel(QWidget):
         title_bar.addWidget(title)
         title_bar.addStretch()
 
-        close_btn = QPushButton("✕")
-        close_btn.setFixedSize(40, 40)
+        close_btn = QPushButton("×")
+        close_btn.setFixedSize(32, 32)
         close_btn.setStyleSheet(
-            "QPushButton { background: rgba(255,255,255,0.08); border: 1px solid #444; color: #bbb; font-size: 20px; font-weight: 600; border-radius: 10px; }"
-            "QPushButton:hover { color: #fff; background: rgba(220,60,60,0.2); border-color: rgba(220,60,60,0.5); }"
+            "QPushButton { background: transparent; border: none; color: #888; font-size: 18px; font-weight: 400; border-radius: 6px; }"
+            "QPushButton:hover { color: #fff; background: #e81123; }"
         )
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.clicked.connect(QApplication.quit)
         title_bar.addWidget(close_btn)
         layout.addLayout(title_bar)

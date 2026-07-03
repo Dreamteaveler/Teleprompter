@@ -20,7 +20,7 @@ ASPECT_RATIO = 16.0 / 9.0
 
 _FLIP_CSS = (
     '<style>'
-    'body{{overflow-x:hidden;}}'
+    ''
     '.flip-wrapper{{'
     'width:{cw}px;min-height:100vh;'
     'transform:scale({sx},{sy});transform-origin:0 0;'

@@ -136,12 +136,17 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
 
     def closeEvent(self, event):
-        reply = QMessageBox.question(
-            self, "退出确认", "确定要退出提词器吗？",
+        msg = QMessageBox(
+            QMessageBox.Icon.Question,
+            "退出确认", "确定要退出提词器吗？",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
+            self,
         )
-        if reply != QMessageBox.StandardButton.Yes:
+        msg.setWindowFlags(
+            msg.windowFlags() | Qt.WindowType.WindowStaysOnTopHint
+        )
+        msg.setDefaultButton(QMessageBox.StandardButton.No)
+        if msg.exec() != QMessageBox.StandardButton.Yes:
             event.ignore()
             return
         try:

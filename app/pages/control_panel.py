@@ -164,7 +164,7 @@ class ControlPanel(QWidget):
         title_bar.addStretch()
         title = QLabel("控制面板")
         title.setObjectName("titleLabel")
-        title.setStyleSheet("font-size: 15px; font-weight: 700; color: #f2f2f2;")
+        title.setStyleSheet("font-size: 15px; font-weight: 700; color: #f2f2f2; padding: 8px 0;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_bar.addWidget(title)
         title_bar.addStretch()

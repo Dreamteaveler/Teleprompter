@@ -170,7 +170,7 @@ class ControlPanel(QWidget):
         close_btn = QPushButton("×")
         close_btn.setFixedSize(32, 32)
         close_btn.setStyleSheet(
-            "QPushButton { background: transparent; border: none; color: #888; font-size: 18px; font-weight: 400; border-radius: 6px; }"
+            "QPushButton { background: transparent; border: none; color: #bbb; font-size: 18px; font-weight: 400; border-radius: 6px; }"
             "QPushButton:hover { color: #fff; background: #e81123; }"
         )
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)

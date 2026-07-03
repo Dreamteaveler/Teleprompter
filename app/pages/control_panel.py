@@ -474,5 +474,4 @@ class ControlPanel(QWidget):
         event.accept()
 
     def closeEvent(self, event):
-        self.hide()
-        event.ignore()
+        event.accept()

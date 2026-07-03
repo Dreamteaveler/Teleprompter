@@ -38,8 +38,8 @@ class ControlPanel(QWidget):
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
-        self.setMinimumWidth(240)
-        self.resize(260, 480)
+        self.setMinimumWidth(280)
+        self.resize(300, 560)
 
         self._is_playing = False
         self._dragging = False
@@ -53,15 +53,15 @@ class ControlPanel(QWidget):
                 background-color: #0d0d0d;
                 color: #f2f2f2;
                 font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
-                font-size: 12px;
+                font-size: 13px;
             }
             QPushButton {
                 background-color: #141414;
                 color: #f2f2f2;
                 border: 1px solid #2e2e2e;
-                border-radius: 6px;
-                padding: 5px 10px;
-                font-size: 11px;
+                border-radius: 8px;
+                padding: 8px 16px;
+                font-size: 12px;
                 font-weight: 500;
             }
             QPushButton:hover {
@@ -77,9 +77,9 @@ class ControlPanel(QWidget):
                 color: #000000;
                 border: none;
                 font-weight: 700;
-                font-size: 12px;
-                padding: 7px;
-                border-radius: 8px;
+                font-size: 14px;
+                padding: 10px;
+                border-radius: 10px;
             }
             QPushButton#playBtn:hover {
                 background-color: #c48d14;
@@ -89,24 +89,24 @@ class ControlPanel(QWidget):
                 color: #DB9D16;
                 border: 1px solid rgba(219, 157, 22, 0.3);
                 font-weight: 700;
-                font-size: 12px;
-                padding: 7px;
-                border-radius: 8px;
+                font-size: 14px;
+                padding: 10px;
+                border-radius: 10px;
             }
             QPushButton#pauseBtn:hover {
                 background-color: rgba(219, 157, 22, 0.25);
             }
             QSlider::groove:horizontal {
                 background: #2e2e2e;
-                height: 3px;
+                height: 4px;
                 border-radius: 2px;
             }
             QSlider::handle:horizontal {
                 background: #DB9D16;
-                width: 12px;
-                height: 12px;
-                margin: -4px 0;
-                border-radius: 6px;
+                width: 14px;
+                height: 14px;
+                margin: -5px 0;
+                border-radius: 7px;
             }
             QSlider::handle:horizontal:hover {
                 background: #c48d14;
@@ -118,33 +118,33 @@ class ControlPanel(QWidget):
             QProgressBar {
                 background-color: #2e2e2e;
                 border: none;
-                border-radius: 4px;
-                height: 6px;
+                border-radius: 6px;
+                height: 8px;
                 text-align: center;
-                font-size: 9px;
+                font-size: 10px;
                 color: #f2f2f2;
             }
             QProgressBar::chunk {
                 background-color: #DB9D16;
-                border-radius: 4px;
+                border-radius: 6px;
             }
             QLabel#valueLabel {
                 color: #DB9D16;
-                font-size: 10px;
+                font-size: 11px;
                 font-weight: 600;
             }
             QLabel#sectionLabel {
                 color: #9e9e9e;
-                font-size: 10px;
+                font-size: 11px;
             }
             QLabel#titleLabel {
-                font-size: 13px;
+                font-size: 14px;
                 font-weight: 700;
                 color: #f2f2f2;
             }
             QLabel#hintLabel {
                 color: #555555;
-                font-size: 9px;
+                font-size: 10px;
             }
         """)
 
@@ -156,25 +156,25 @@ class ControlPanel(QWidget):
         outer.addWidget(frame)
 
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(12, 8, 12, 10)
-        layout.setSpacing(6)
+        layout.setContentsMargins(16, 12, 16, 16)
+        layout.setSpacing(10)
 
         # ─── Title Bar (draggable) ──────────────────
         title_bar = QHBoxLayout()
         title_bar.addStretch()
         title = QLabel("控制面板")
         title.setObjectName("titleLabel")
-        title.setStyleSheet("font-size: 14px; font-weight: 700; color: #f2f2f2; padding: 6px 0;")
+        title.setStyleSheet("font-size: 15px; font-weight: 700; color: #f2f2f2; padding: 8px 0;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_bar.addWidget(title)
         title_bar.addStretch()
         layout.addLayout(title_bar)
 
         close_btn = QPushButton("✕", self)
-        close_btn.setFixedSize(32, 32)
-        close_btn.move(self.width() - 40, 6)
+        close_btn.setFixedSize(40, 40)
+        close_btn.move(self.width() - 48, 8)
         close_btn.setStyleSheet(
-            "QPushButton { background: rgba(255,255,255,0.08); border: 1px solid #444; color: #bbb; font-size: 16px; font-weight: 600; border-radius: 8px; font-family: 'Microsoft YaHei'; }"
+            "QPushButton { background: rgba(255,255,255,0.08); border: 1px solid #444; color: #bbb; font-size: 20px; font-weight: 600; border-radius: 10px; font-family: 'Microsoft YaHei'; }"
             "QPushButton:hover { color: #fff; background: #e81123; border-color: #e81123; }"
         )
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -367,13 +367,13 @@ class ControlPanel(QWidget):
             self._play_btn.setStyleSheet(
                 "background-color: rgba(219, 157, 22, 0.15); color: #DB9D16;"
                 "border: 1px solid rgba(219, 157, 22, 0.3); font-weight: 700;"
-                "font-size: 12px; padding: 7px; border-radius: 8px;"
+                "font-size: 14px; padding: 10px; border-radius: 10px;"
             )
         else:
             self._play_btn.setText("▶ 播放  (空格)")
             self._play_btn.setStyleSheet(
                 "background-color: #DB9D16; color: #000000; border: none;"
-                "font-weight: 700; font-size: 12px; padding: 7px; border-radius: 8px;"
+                "font-weight: 700; font-size: 14px; padding: 10px; border-radius: 10px;"
             )
 
     def set_progress(self, percent: float):

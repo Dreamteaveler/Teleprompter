@@ -165,19 +165,20 @@ class ControlPanel(QWidget):
         title = QLabel("控制面板")
         title.setObjectName("titleLabel")
         title.setStyleSheet("font-size: 15px; font-weight: 700; color: #f2f2f2;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_bar.addWidget(title)
         title_bar.addStretch()
+        layout.addLayout(title_bar)
 
-        close_btn = QPushButton("✕")
+        close_btn = QPushButton("✕", self)
         close_btn.setFixedSize(40, 40)
+        close_btn.move(self.width() - 48, 8)
         close_btn.setStyleSheet(
             "QPushButton { background: rgba(255,255,255,0.08); border: 1px solid #444; color: #bbb; font-size: 20px; font-weight: 600; border-radius: 10px; font-family: 'Microsoft YaHei'; }"
             "QPushButton:hover { color: #fff; background: #e81123; border-color: #e81123; }"
         )
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.clicked.connect(self.close_requested.emit)
-        title_bar.addWidget(close_btn)
-        layout.addLayout(title_bar)
 
         # ─── Back / Reset row ───────────────────────
         btn_row = QHBoxLayout()

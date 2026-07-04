@@ -83,11 +83,16 @@ class MirrorSyncMixin:
         self._update_mirror_scale()
         self._resync_debounce_timer.start()
 
+    def _on_mirror_fs_changed(self, active: bool):
+        if self._control_panel:
+            self._control_panel.set_mirror_fullscreen_state(active)
+
     def _open_mirror(self):
         if self._mirror_window is None:
             self._mirror_window = MirrorWindow()
             self._mirror_window.destroyed.connect(self._on_mirror_closed)
             self._mirror_window.resized.connect(self._on_mirror_resized)
+            self._mirror_window.fullscreen_changed.connect(self._on_mirror_fs_changed)
         self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip)
         self._mirror_window.showNormal()
         self._position_mirror_on_secondary()

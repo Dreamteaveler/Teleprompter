@@ -32,6 +32,7 @@ _FLIP_CSS = (
 
 class MirrorWindow(QMainWindow):
     resized = pyqtSignal()
+    fullscreen_changed = pyqtSignal(bool)
 
     def __init__(self):
         super().__init__()
@@ -169,6 +170,7 @@ class MirrorWindow(QMainWindow):
                 self.showFullScreen()
         finally:
             self._reinstall_shortcuts()
+            self.fullscreen_changed.emit(self.isFullScreen())
             QTimer.singleShot(500, self._on_fullscreen_stable)
 
     def _on_fullscreen_stable(self):

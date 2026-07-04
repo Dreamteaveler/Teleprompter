@@ -453,11 +453,13 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             return
         if self._mirror_window.isFullScreen():
             self._mirror_window.showNormal()
+            new_state = False
         else:
             self._mirror_window.showFullScreen()
+            new_state = True
         QTimer.singleShot(500, self._update_mirror_scale)
         if self._control_panel:
-            self._control_panel.set_mirror_fullscreen_state(self._mirror_window.isFullScreen())
+            self._control_panel.set_mirror_fullscreen_state(new_state)
 
     def _toggle_reading_line(self):
         self._reading_line_visible = not self._reading_line_visible

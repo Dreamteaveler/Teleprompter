@@ -323,6 +323,11 @@ class ControlPanel(QWidget):
         self._progress_label = QLabel("0%")
         self._progress_label.setObjectName("valueLabel")
         progress_layout.addWidget(self._progress_label)
+        self._eta_label = QLabel("")
+        self._eta_label.setObjectName("sectionLabel")
+        self._eta_label.setFixedWidth(50)
+        self._eta_label.setAlignment(Qt.AlignmentFlag.AlignRight)
+        progress_layout.addWidget(self._eta_label)
         layout.addLayout(progress_layout)
 
         self._progress_bar = QProgressBar()
@@ -397,6 +402,9 @@ class ControlPanel(QWidget):
         pct = max(0, min(100, int(percent)))
         self._progress_bar.setValue(pct)
         self._progress_label.setText(f"{pct}%")
+
+    def set_eta(self, text: str):
+        self._eta_label.setText(text)
 
     def set_font_size(self, value: int):
         self._font_size_slider.blockSignals(True)

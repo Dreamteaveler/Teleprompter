@@ -345,16 +345,24 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         if self._control_panel is None or not self._control_panel.isVisible():
             return
         self._view.page().runJavaScript(
-            "[window.pageYOffset, (function(){var maxY=document.documentElement.scrollHeight-window.innerHeight;return maxY>0?window.pageYOffset/maxY*100:0;})()]",
+            "[window.pageYOffset, (function(){var maxY=document.documentElement.scrollHeight-window.innerHeight;return maxY>0?window.pageYOffset/maxY*100:0;})(), document.documentElement.scrollHeight-window.innerHeight]",
             lambda result: self._update_progress(result) if result is not None else None
         )
 
     def _update_progress(self, result):
         scroll_y = float(result[0]) if result[0] is not None else 0.0
         pct = float(result[1]) if len(result) > 1 and result[1] is not None else 0.0
+        max_y = float(result[2]) if len(result) > 2 and result[2] is not None else 0.0
         self._scroll_position = scroll_y
         if self._control_panel:
             self._control_panel.set_progress(pct)
+            if self._is_playing and self._pixels_per_second > 0 and max_y > 0:
+                remaining_sec = (max_y - scroll_y) / self._pixels_per_second
+                m = int(remaining_sec // 60)
+                s = int(remaining_sec % 60)
+                self._control_panel.set_eta(f"{m}:{s:02d}")
+            else:
+                self._control_panel.set_eta("--:--")
 
     def _show_control_panel(self):
         self._init_control_panel()

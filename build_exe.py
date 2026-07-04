@@ -24,6 +24,8 @@ SPEC_FILE = ROOT / "Teleprompter.spec"
 DIST_DIR = ROOT / "dist"
 BUILD_DIR = ROOT / "build"
 EXE_NAME = "提词器1.10.exe"
+PORTABLE_NAME = "提词器1.10便携版"
+COLLECT_DIR = DIST_DIR / PORTABLE_NAME
 
 
 def run(cmd: list[str], **kwargs):
@@ -96,12 +98,14 @@ def build():
     ])
 
     exe_path = DIST_DIR / EXE_NAME
+    collect_path = COLLECT_DIR
     if exe_path.exists():
         size_mb = exe_path.stat().st_size / (1024 * 1024)
         print("\n" + "=" * 60)
         print(f"  构建成功!")
-        print(f"  输出: {exe_path}")
-        print(f"  大小: {size_mb:.1f} MB")
+        print(f"  单文件版: {exe_path}  ({size_mb:.1f} MB)")
+        if collect_path.exists():
+            print(f"  便携版:   {collect_path}\\")
         print("=" * 60)
     else:
         print(f"\n构建产物未找到: {exe_path}")

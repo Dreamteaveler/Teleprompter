@@ -106,3 +106,13 @@ exe = EXE(
     entitlements_file=None,
     icon=str(ROOT / "text.ico"),
 )
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name="提词器1.10便携版",
+)

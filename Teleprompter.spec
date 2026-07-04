@@ -91,7 +91,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="提词器1.10",
+    name="提词器1.10单文件版",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

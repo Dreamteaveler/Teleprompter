@@ -238,6 +238,8 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
                 f"var maxY=d.scrollHeight-window.innerHeight;"
                 f"var target=maxY*{ratio};"
                 f"window.scrollTo(0,Math.max(0,target));"
+                f"target",
+                lambda y: self._on_scroll_restored(float(y) if y is not None else 0)
             )
         self._start_sync_timer()
         if self._auto_resume:
@@ -252,6 +254,10 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
 
     def _on_scroll_height(self, height):
         self._scroll_height = max(int(height) if height is not None else 1, 1)
+
+    def _on_scroll_restored(self, y: float):
+        self._scroll_position = y
+        self._accumulated_scroll = y
 
     def _load_content(self, text: str, keep_scroll: bool = False):
         if keep_scroll:

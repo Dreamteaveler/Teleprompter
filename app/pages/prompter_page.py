@@ -345,15 +345,14 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         if self._control_panel is None or not self._control_panel.isVisible():
             return
         self._view.page().runJavaScript(
-            "window.pageYOffset",
-            lambda y: self._update_progress(float(y) if y is not None else 0.0)
+            "[window.pageYOffset, (function(){var maxY=document.documentElement.scrollHeight-window.innerHeight;return maxY>0?window.pageYOffset/maxY*100:0;})()]",
+            lambda result: self._update_progress(result) if result is not None else None
         )
 
-    def _update_progress(self, scroll_y: float):
+    def _update_progress(self, result):
+        scroll_y = float(result[0]) if result[0] is not None else 0.0
+        pct = float(result[1]) if len(result) > 1 and result[1] is not None else 0.0
         self._scroll_position = scroll_y
-        if self._scroll_height <= 1:
-            return
-        pct = min(100, scroll_y / self._scroll_height * 100)
         if self._control_panel:
             self._control_panel.set_progress(pct)
 

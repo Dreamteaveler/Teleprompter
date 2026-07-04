@@ -229,7 +229,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             return
         self._page_ready = True
         self._refresh_scroll_height()
-        self._update_reading_line()
+        QTimer.singleShot(0, self._update_reading_line)
         if self._pending_scroll_ratio is not None:
             ratio = self._pending_scroll_ratio
             self._pending_scroll_ratio = None

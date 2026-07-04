@@ -438,6 +438,8 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             win.showNormal()
             self._is_fullscreen = False
             QTimer.singleShot(400, lambda: setattr(win, '_resizing', False))
+            if self._control_panel:
+                self._control_panel.set_main_fullscreen_state(False)
         else:
             self._on_back()
 

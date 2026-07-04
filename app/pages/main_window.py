@@ -114,13 +114,10 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, event: QKeyEvent):
         key = event.key()
         if key == Qt.Key.Key_F11:
-            if self.isFullScreen():
-                self.showNormal()
-            else:
-                self.showFullScreen()
+            self._prompter._toggle_fullscreen()
             return
         if key == Qt.Key.Key_Escape and self.isFullScreen():
-            self.showNormal()
+            self._prompter._exit_fullscreen()
             return
         super().keyPressEvent(event)
 

@@ -60,6 +60,7 @@ class PlaybackMixin:
         self._last_tick_time = now
         delta = elapsed * self._pixels_per_second
         self._accumulated_scroll += delta
+        self._scroll_position = self._accumulated_scroll
         self._view.page().runJavaScript(f"window.scrollBy(0, {delta});")
 
         self._tick_frame += 1
@@ -77,6 +78,7 @@ class PlaybackMixin:
         max_y = float(result[0]) if result[0] is not None else 0
         current_y = float(result[1]) if result[1] is not None else 0
         self._accumulated_scroll = current_y
+        self._scroll_position = current_y
         if max_y <= 1 or (max_y > 1 and current_y >= max_y - 2):
             self._pause()
 

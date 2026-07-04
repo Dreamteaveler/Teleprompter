@@ -98,7 +98,29 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,          # GUI 应用，不显示控制台
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon=str(ROOT / "text.ico"),
+)
+
+exe_portable = EXE(
+    pyz,
+    a.scripts,
+    [],   # 不含 binaries/datas — 由 COLLECT 外挂
+    [],
+    [],
+    name="提词器",
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -108,7 +130,7 @@ exe = EXE(
 )
 
 coll = COLLECT(
-    exe,
+    exe_portable,
     a.binaries,
     a.datas,
     strip=False,

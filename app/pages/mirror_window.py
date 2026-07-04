@@ -96,6 +96,8 @@ class MirrorWindow(QMainWindow):
             )
 
     def sync_scroll_pct(self, ratio: float):
+        if self._vflip:
+            ratio = 1.0 - ratio
         self._pending_scroll_y = ratio
         js = (
             "var maxY=document.documentElement.scrollHeight-window.innerHeight;"

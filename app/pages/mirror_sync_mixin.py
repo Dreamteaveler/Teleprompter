@@ -63,11 +63,7 @@ class MirrorSyncMixin:
         scroll_y = self._scroll_position if keep_scroll else 0.0
         self._mirror_window._reading_line_visible = self._reading_line_visible
         self._mirror_window._reading_line_opacity = self._reading_line_opacity
-        fs = self._font_size
-        pt = int(fs * 0.3)
-        pb = int(fs * 1.5)
-        px = int(fs * (0.5 + self._margin / 5.0))
-        self._mirror_window.set_content(html, scroll_y, self._mirror_reading_line_y, self._mirror_scale, (pt, px, pb))
+        self._mirror_window.set_content(html, scroll_y, self._mirror_reading_line_y, self._mirror_scale)
 
     def _sync_mirror_if_open(self, keep_scroll: bool = True):
         if self._is_mirror_open and self._mirror_window:

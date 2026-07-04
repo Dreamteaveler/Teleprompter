@@ -20,13 +20,10 @@ ASPECT_RATIO = 16.0 / 9.0
 
 _FLIP_CSS = (
     '<style>'
-    '.flip-outer{{'
-    'transform:scale({sx},{sx});transform-origin:0 0;'
-    'width:{cw}px;min-height:100vh;'
-    '}}'
-    '.flip-inner{{'
-    'transform:scale({fy},{fy});transform-origin:50% 50%;'
-    'width:100%;height:100%;'
+    '.flip-wrapper{{'
+    'transform:scale({sx},{sy});'
+    'transform-origin:50% 50%;'
+    'width:100%;min-height:100vh;'
     '}}'
     '#rl{{pointer-events:none !important;cursor:default !important;}}'
     '</style>'
@@ -52,7 +49,6 @@ class MirrorWindow(QMainWindow):
         self._reading_line_visible: bool = True
         self._reading_line_opacity: float = 1.0
         self._mirror_scale: float = 1.0
-        self._padding: tuple = (0, 0, 0)
 
         self._view = QWebEngineView()
         self._view.setStyleSheet("background-color: #0d0d0d; border: none;")
@@ -65,12 +61,12 @@ class MirrorWindow(QMainWindow):
         self._view.loadFinished.connect(self._on_page_loaded)
         self.setCentralWidget(self._view)
 
-    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0, padding: tuple = (0, 0, 0)):
+    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0):
         self._content_html = full_html
         self._pending_scroll_y = scroll_y
         self._pending_rl_y = rl_y
         self._mirror_scale = scale
-        self._padding = padding
+        self._view.setZoomFactor(scale)
         self._load_html()
 
     def view_width(self) -> int:
@@ -85,8 +81,7 @@ class MirrorWindow(QMainWindow):
 
     def update_scale(self, scale: float):
         self._mirror_scale = scale
-        if self._content_html:
-            self._rebuild_with_scroll(self._pending_scroll_y)
+        self._view.setZoomFactor(scale)
 
     def sync_scroll(self, scroll_y: float):
         self._pending_scroll_y = scroll_y
@@ -139,32 +134,12 @@ class MirrorWindow(QMainWindow):
 
     def _load_html(self):
         html = self._content_html
-        scale = self._mirror_scale
-        sx_flip = -1 if self._hflip else 1
-        sy_flip = -1 if self._vflip else 1
-        cw = int(self._view.width() / max(0.01, scale))
-        pt, px, pb = self._padding
-        flip_tag = (
-            f'<style>'
-            f'body{{padding:0!important;}}'
-            f'.flip-outer{{'
-            f'transform:scale({scale},{scale});transform-origin:0 0;'
-            f'width:{cw}px;'
-            f'}}'
-            f'.flip-inner{{'
-            f'transform:scale({sx_flip},{sy_flip});transform-origin:50% 50%;'
-            f'width:100%;'
-            f'padding:{pt}px {px}px {pb}px {px}px;'
-            f'}}'
-            f'#rl{{pointer-events:none !important;cursor:default !important;}}'
-            f'</style>'
-        )
+        sx = -1 if self._hflip else 1
+        sy = -1 if self._vflip else 1
+        flip_tag = _FLIP_CSS.format(sx=sx, sy=sy)
         html = re.sub(r'(</head>)', flip_tag + r'\1', html)
-        html = re.sub(
-            r'(<body[^>]*>)',
-            r'\1<div class="flip-outer"><div class="flip-inner">', html
-        )
-        html = re.sub(r'(<div\s+id="rl"[^>]*>)', r'</div></div>\1', html)
+        html = re.sub(r'(<body[^>]*>)', r'\1<div class="flip-wrapper">', html)
+        html = re.sub(r'(<div\s+id="rl"[^>]*>)', r'</div>\1', html)
         self._view.setHtml(html, mathjax_base_url())
 
     def _rebuild_with_scroll(self, scroll_y: float):

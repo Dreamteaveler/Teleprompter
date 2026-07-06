@@ -91,35 +91,51 @@ class PlaybackMixin:
             self._control_panel.set_speed(value)
 
     def _speed_up(self):
-        self._update_speed_step(1)
-        new_wpm = min(200, self._wpm + self._speed_step)
+        new_wpm = min(200, self._wpm + 2)
         self._wpm = new_wpm
+        self._last_speed_change = time.monotonic()
         if self._is_playing:
             chars_per_minute = self._wpm * 2.5
             self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
         if self._control_panel:
             self._control_panel.set_speed(new_wpm)
+        self._start_speed_hold(1)
 
     def _speed_down(self):
-        self._update_speed_step(-1)
-        new_wpm = max(0, self._wpm - self._speed_step)
+        new_wpm = max(0, self._wpm - 2)
+        self._wpm = new_wpm
+        self._last_speed_change = time.monotonic()
+        if self._is_playing:
+            chars_per_minute = self._wpm * 2.5
+            self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
+        if self._control_panel:
+            self._control_panel.set_speed(new_wpm)
+        self._start_speed_hold(-1)
+
+    def _start_speed_hold(self, direction: int):
+        self._speed_hold_dir = direction
+        self._speed_hold_start = time.monotonic()
+        self._speed_hold_step = 2
+        self._speed_timer.start(150)
+
+    def _stop_speed_hold(self):
+        self._speed_timer.stop()
+
+    def _tick_speed_hold(self):
+        elapsed = time.monotonic() - self._speed_hold_start
+        if elapsed < 0.4:
+            return
+        self._speed_hold_step = min(10, 2 + int((elapsed - 0.4) / 0.3) * 2)
+        delta = self._speed_hold_step * self._speed_hold_dir
+        new_wpm = max(0, min(200, self._wpm + delta))
+        if new_wpm == self._wpm:
+            return
         self._wpm = new_wpm
         if self._is_playing:
             chars_per_minute = self._wpm * 2.5
             self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
         if self._control_panel:
             self._control_panel.set_speed(new_wpm)
-
-    def _update_speed_step(self, direction: int):
-        now = time.monotonic()
-        last = getattr(self, '_last_speed_change', 0)
-        last_dir = getattr(self, '_speed_dir', 0)
-        if direction != last_dir or now - last > 0.5:
-            self._speed_step = 2
-        else:
-            self._speed_step = min(20, self._speed_step + 2)
-        self._speed_dir = direction
-        self._last_speed_change = now
 
     def _reset_scroll(self):
         self._scroll_position = 0.0

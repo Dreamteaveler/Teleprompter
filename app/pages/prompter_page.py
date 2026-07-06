@@ -85,6 +85,10 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._tick_frame = 0
         self._last_tick_time = 0.0
 
+        self._speed_timer = QTimer(self)
+        self._speed_timer.setTimerType(Qt.TimerType.PreciseTimer)
+        self._speed_timer.timeout.connect(self._tick_speed_hold)
+
         self._sync_timer = QTimer(self)
         self._sync_timer.setTimerType(Qt.TimerType.PreciseTimer)
         self._sync_timer.timeout.connect(self._tick_sync_mirror)
@@ -522,6 +526,9 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._shortcut_mgr.set_release_shortcuts({
                 Qt.Key.Key_Up: self._stop_scroll,
                 Qt.Key.Key_Down: self._stop_scroll,
+                Qt.Key.Key_Plus: self._stop_speed_hold,
+                Qt.Key.Key_Equal: self._stop_speed_hold,
+                Qt.Key.Key_Minus: self._stop_speed_hold,
             })
             self._shortcut_mgr.set_double_click_handler(self._toggle_fullscreen)
         if self._shortcut_mgr is not None:

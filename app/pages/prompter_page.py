@@ -452,12 +452,15 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         if not self._is_mirror_open or not self._mirror_window:
             return
         if self._mirror_window.isFullScreen():
+            self._mirror_window._resizing = True
             self._mirror_window.showNormal()
             new_state = False
         else:
+            self._mirror_window._resizing = True
             self._mirror_window.showFullScreen()
             new_state = True
         QTimer.singleShot(500, self._update_mirror_scale)
+        QTimer.singleShot(500, lambda: self._mirror_window._force_resize_to_aspect())
         if self._control_panel:
             self._control_panel.set_mirror_fullscreen_state(new_state)
 

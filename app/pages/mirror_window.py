@@ -177,6 +177,14 @@ class MirrorWindow(QMainWindow):
         self._resizing = False
         self.resized.emit()
 
+    def _force_resize_to_aspect(self):
+        self._resizing = False
+        if not self.isFullScreen():
+            w = self.width()
+            h = max(540, int(w / ASPECT_RATIO))
+            self.resize(w, h)
+        self.resized.emit()
+
     def _reinstall_shortcuts(self):
         if self._shortcut_mgr is not None:
             self._shortcut_mgr.install()

@@ -153,6 +153,14 @@ class PlaybackMixin:
         self._scroll_key_start = time.monotonic()
         self._scroll_timer.start(16)
 
+    def _scroll_page_up(self):
+        delta = self._font_size * self._line_spacing * 3
+        self._view.page().runJavaScript(f"window.scrollBy(0, {-delta});")
+
+    def _scroll_page_down(self):
+        delta = self._font_size * self._line_spacing * 3
+        self._view.page().runJavaScript(f"window.scrollBy(0, {delta});")
+
     def _start_scroll_down(self):
         self._scroll_direction = 1
         self._scroll_key_start = time.monotonic()

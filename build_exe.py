@@ -97,6 +97,11 @@ def build():
         str(SPEC_FILE),
     ])
 
+    # 清理便携版 EXE 的中间产物（已在子文件夹中）
+    leftover = DIST_DIR / "提词器.exe"
+    if leftover.exists():
+        leftover.unlink()
+
     exe_path = DIST_DIR / EXE_NAME
     collect_path = COLLECT_DIR
     if exe_path.exists():

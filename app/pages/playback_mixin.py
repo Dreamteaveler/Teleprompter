@@ -91,7 +91,8 @@ class PlaybackMixin:
             self._control_panel.set_speed(value)
 
     def _speed_up(self):
-        new_wpm = min(200, self._wpm + 2)
+        self._update_speed_step(1)
+        new_wpm = min(200, self._wpm + self._speed_step)
         self._wpm = new_wpm
         if self._is_playing:
             chars_per_minute = self._wpm * 2.5
@@ -100,13 +101,25 @@ class PlaybackMixin:
             self._control_panel.set_speed(new_wpm)
 
     def _speed_down(self):
-        new_wpm = max(0, self._wpm - 2)
+        self._update_speed_step(-1)
+        new_wpm = max(0, self._wpm - self._speed_step)
         self._wpm = new_wpm
         if self._is_playing:
             chars_per_minute = self._wpm * 2.5
             self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
         if self._control_panel:
             self._control_panel.set_speed(new_wpm)
+
+    def _update_speed_step(self, direction: int):
+        now = time.monotonic()
+        last = getattr(self, '_last_speed_change', 0)
+        last_dir = getattr(self, '_speed_dir', 0)
+        if direction != last_dir or now - last > 0.5:
+            self._speed_step = 2
+        else:
+            self._speed_step = min(20, self._speed_step + 2)
+        self._speed_dir = direction
+        self._last_speed_change = now
 
     def _reset_scroll(self):
         self._scroll_position = 0.0

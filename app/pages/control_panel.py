@@ -184,26 +184,26 @@ class ControlPanel(QWidget):
         close_btn.clicked.connect(self.close_requested.emit)
 
         # ─── Back / Reset row ───────────────────────
-        btn_row = QHBoxLayout()
-        btn_row.setSpacing(8)
-
+        row1 = QHBoxLayout()
+        row1.setSpacing(8)
         back_btn = QPushButton("← 返回")
         back_btn.clicked.connect(self.back_requested.emit)
-        btn_row.addWidget(back_btn)
-
-        edit_btn = QPushButton("✎ 编辑")
-        edit_btn.clicked.connect(self.edit_requested.emit)
-        btn_row.addWidget(edit_btn)
-
+        row1.addWidget(back_btn)
         reset_btn = QPushButton("↺ 重置")
         reset_btn.clicked.connect(self.reset_requested.emit)
-        btn_row.addWidget(reset_btn)
+        row1.addWidget(reset_btn)
+        layout.addLayout(row1)
 
+        # ─── Edit row ────────────────────────────────
+        row2 = QHBoxLayout()
+        row2.setSpacing(8)
+        edit_btn = QPushButton("✎ 编辑")
+        edit_btn.clicked.connect(self.edit_requested.emit)
+        row2.addWidget(edit_btn)
         self._inline_edit_btn = QPushButton("实时编辑")
         self._inline_edit_btn.clicked.connect(self.inline_edit_toggled.emit)
-        btn_row.addWidget(self._inline_edit_btn)
-
-        layout.addLayout(btn_row)
+        row2.addWidget(self._inline_edit_btn)
+        layout.addLayout(row2)
 
         # ─── Play / Pause button ────────────────────
         self._play_btn = QPushButton("▶ 播放  (空格)")

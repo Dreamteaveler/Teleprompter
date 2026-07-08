@@ -167,6 +167,10 @@ class PlaybackMixin:
         self._scroll_timer.start(16)
 
     def _stop_scroll(self):
+        held = time.monotonic() - self._scroll_key_start
+        if held < 0.1 and self._scroll_direction != 0:
+            delta = self._font_size * self._line_spacing * 3 * self._scroll_direction
+            self._view.page().runJavaScript(f"window.scrollBy(0, {delta});")
         self._scroll_direction = 0
         self._scroll_timer.stop()
 

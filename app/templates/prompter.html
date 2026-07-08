@@ -108,7 +108,8 @@ MathJax = {
     return clone.innerHTML;
   };
   window.enterInlineEdit = function() {
-    var y = window.pageYOffset;
+    var y = window.pageYOffset, rl = document.getElementById('rl');
+    if (rl) rl.style.display = 'none';
     var c = document.querySelector('.content');
     if (!c) return;
     document.querySelectorAll('mjx-container').forEach(function(mjx){mjx.contentEditable='false';});

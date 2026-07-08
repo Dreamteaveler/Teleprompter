@@ -519,6 +519,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
                 "window.getCleanContent?window.getCleanContent():c?c.innerHTML:''",
                 lambda html: self._save_inline_edit(html) if html else None
             )
+            self._update_reading_line()
 
     def _save_inline_edit(self, html: str):
         if not self._manuscript:

@@ -510,7 +510,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         if self._control_panel:
             self._control_panel.set_inline_edit_state(self._inline_editing)
         if self._inline_editing:
-            self._view.page().runJavaScript("window.enterInlineEdit?window.enterInlineEdit():void 0")
+            self._view.page().runJavaScript("window.enterInlineEdit&&window.enterInlineEdit()")
         else:
             self._view.page().runJavaScript(
                 "var c=document.querySelector('.content');"

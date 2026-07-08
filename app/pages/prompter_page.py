@@ -11,7 +11,7 @@ import html as html_module
 import markdown
 
 from PyQt6.QtWidgets import (
-    QWidget, QGridLayout, QSizePolicy,
+    QWidget, QGridLayout, QSizePolicy, QMenu,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -137,7 +137,8 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.ErrorPageEnabled, False)
         self._view.loadFinished.connect(self._on_page_loaded)
-        self._view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
+        self._view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._view.customContextMenuRequested.connect(self._on_context_menu)
         self._view.setStyleSheet("background-color: #0d0d0d;")
 
         layout.addWidget(self._view, 0, 0, 1, 1)
@@ -250,6 +251,15 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         if self._auto_resume:
             self._auto_resume = False
             self._play()
+
+    def _on_context_menu(self, pos):
+        menu = QMenu(self)
+        menu.addAction("切换全屏", self._toggle_fullscreen)
+        menu.addAction("切换引导框", self._toggle_reading_line)
+        menu.addSeparator()
+        menu.addAction("播放 / 暂停", self._toggle_play)
+        menu.addAction("重置进度", self._reset_scroll)
+        menu.exec(self._view.mapToGlobal(pos))
 
     def _refresh_scroll_height(self):
         self._view.page().runJavaScript(

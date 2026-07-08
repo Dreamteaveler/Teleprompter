@@ -112,7 +112,6 @@ MathJax = {
     if (!c) return;
     document.querySelectorAll('mjx-container').forEach(function(mjx){mjx.contentEditable='false';});
     c.contentEditable = 'true';
-    c.focus();
     document.body.style.userSelect = 'auto';
     window.scrollTo(0, y);
   };

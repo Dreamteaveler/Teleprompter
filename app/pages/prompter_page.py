@@ -519,8 +519,6 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
                 Qt.Key.Key_Down: self._start_scroll_down,
                 Qt.Key.Key_PageUp: self._scroll_page_up,
                 Qt.Key.Key_PageDown: self._scroll_page_down,
-                Qt.Key.Key_F5: self._start_scroll_up,
-                Qt.Key.Key_B: self._start_scroll_down,
                 Qt.Key.Key_R: self._reset_scroll,
                 Qt.Key.Key_M: self._toggle_mirror,
                 Qt.Key.Key_Plus: self._speed_up,
@@ -530,8 +528,6 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._shortcut_mgr.set_release_shortcuts({
                 Qt.Key.Key_Up: self._stop_scroll,
                 Qt.Key.Key_Down: self._stop_scroll,
-                Qt.Key.Key_F5: self._stop_scroll,
-                Qt.Key.Key_B: self._stop_scroll,
                 Qt.Key.Key_Plus: self._stop_speed_hold,
                 Qt.Key.Key_Equal: self._stop_speed_hold,
                 Qt.Key.Key_Minus: self._stop_speed_hold,

@@ -137,6 +137,8 @@ class MirrorSyncMixin:
         self._stop_sync_timer()
         if self._mirror_window:
             self._mirror_window.close()
+            self._mirror_window.deleteLater()
+            self._mirror_window = None
         if self._control_panel:
             self._control_panel.set_mirror_state(False)
 

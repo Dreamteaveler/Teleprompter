@@ -34,9 +34,16 @@ class MainWindow(QMainWindow):
         self._stack = QStackedWidget()
         self.setCentralWidget(self._stack)
 
+        import time, os as _os
+        t0 = time.time()
         self._home = HomePage()
         self._prompter = PrompterPage()
+        t1 = time.time()
         self._editor = EditorPage()
+        t2 = time.time()
+        with open(_os.path.expanduser(r"~\Desktop\启动日志.log"), "a", encoding="utf-8") as f:
+            f.write(f"  HomePage+PrompterPage: {t1-t0:.1f}s\n")
+            f.write(f"  EditorPage: {t2-t1:.1f}s\n")
 
         self._stack.addWidget(self._home)
         self._stack.addWidget(self._prompter)

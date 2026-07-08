@@ -25,6 +25,7 @@ class ControlPanel(QWidget):
     reading_line_opacity_changed = pyqtSignal(float)
     edit_requested = pyqtSignal()
     close_requested = pyqtSignal()
+    inline_edit_toggled = pyqtSignal()
     horizontal_flip_toggled = pyqtSignal(bool)
     vertical_flip_toggled = pyqtSignal(bool)
     fullscreen_main_requested = pyqtSignal()
@@ -197,6 +198,10 @@ class ControlPanel(QWidget):
         reset_btn = QPushButton("↺ 重置")
         reset_btn.clicked.connect(self.reset_requested.emit)
         btn_row.addWidget(reset_btn)
+
+        self._inline_edit_btn = QPushButton("实时编辑")
+        self._inline_edit_btn.clicked.connect(self.inline_edit_toggled.emit)
+        btn_row.addWidget(self._inline_edit_btn)
 
         layout.addLayout(btn_row)
 
@@ -494,6 +499,9 @@ class ControlPanel(QWidget):
         self._fs_mirror_btn.setChecked(active)
         self._fs_mirror_btn.setText("镜像全屏：是" if active else "镜像全屏：否")
         self._fs_mirror_btn.blockSignals(False)
+
+    def set_inline_edit_state(self, active: bool):
+        self._inline_edit_btn.setText("退出实时编辑" if active else "实时编辑")
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:

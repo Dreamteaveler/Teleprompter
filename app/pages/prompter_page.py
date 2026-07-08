@@ -338,6 +338,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.reading_line_opacity_changed.connect(self._on_reading_line_opacity_changed)
             self._control_panel.edit_requested.connect(self._on_edit_requested)
             self._control_panel.close_requested.connect(self._on_close_requested)
+            self._control_panel.inline_edit_toggled.connect(self._on_inline_edit)
             self._control_panel.horizontal_flip_toggled.connect(self._on_horizontal_flip_toggled)
             self._control_panel.vertical_flip_toggled.connect(self._on_vertical_flip_toggled)
             self._control_panel.fullscreen_main_requested.connect(self._on_main_fullscreen)
@@ -503,6 +504,32 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
 
     def _on_close_requested(self):
         self.window().close()
+
+    def _on_inline_edit(self):
+        self._inline_editing = not getattr(self, '_inline_editing', False)
+        if self._control_panel:
+            self._control_panel.set_inline_edit_state(self._inline_editing)
+        if self._inline_editing:
+            self._view.page().runJavaScript(
+                "var c=document.querySelector('.content');"
+                "if(c){c.contentEditable='true';c.focus();}"
+                "document.body.style.userSelect='auto';"
+            )
+        else:
+            self._view.page().runJavaScript(
+                "var c=document.querySelector('.content');"
+                "if(c){c.contentEditable='false';}"
+                "document.body.style.userSelect='none';"
+                "c?c.innerHTML:''",
+                lambda html: self._save_inline_edit(html) if html else None
+            )
+
+    def _save_inline_edit(self, html: str):
+        if not self._manuscript:
+            return
+        from app.database import update_manuscript
+        update_manuscript(self._manuscript.id, self._manuscript.title, html)
+        self._manuscript.content = html
 
     def _on_back(self):
         self._pause()

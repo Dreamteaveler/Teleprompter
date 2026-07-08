@@ -137,6 +137,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.ErrorPageEnabled, False)
         self._view.loadFinished.connect(self._on_page_loaded)
+        self._view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self._view.setStyleSheet("background-color: #0d0d0d;")
 
         layout.addWidget(self._view, 0, 0, 1, 1)

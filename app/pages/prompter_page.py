@@ -516,7 +516,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
                 msg = QMessageBox(
                     QMessageBox.Icon.Information,
                     "实时编辑提示",
-                    "实时编辑模式下无法编辑公式（公式已保护）。\n+/- 调速键暂时禁用，编辑完成后恢复。",
+                    "实时编辑模式下无法编辑公式（公式已保护）。",
                     QMessageBox.StandardButton.Ok,
                     self,
                 )

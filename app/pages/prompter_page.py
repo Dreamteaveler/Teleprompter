@@ -510,7 +510,32 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         if self._control_panel:
             self._control_panel.set_inline_edit_state(self._inline_editing)
         if self._inline_editing:
+            if not getattr(self, '_inline_edit_warned', False):
+                self._inline_edit_warned = True
+                from PyQt6.QtWidgets import QMessageBox
+                msg = QMessageBox(
+                    QMessageBox.Icon.Information,
+                    "实时编辑提示",
+                    "实时编辑模式下无法编辑公式（公式已保护）。\n+/- 调速键暂时禁用，编辑完成后恢复。",
+                    QMessageBox.StandardButton.Ok,
+                    self,
+                )
+                msg.setWindowFlags(msg.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+                msg.exec()
             self._view.page().runJavaScript("window.enterInlineEdit&&window.enterInlineEdit()")
+            self._shortcut_mgr.set_shortcuts({
+                Qt.Key.Key_Space: self._toggle_play,
+                Qt.Key.Key_F1: self._toggle_control_panel,
+                Qt.Key.Key_F2: self._toggle_reading_line,
+                Qt.Key.Key_F11: self._toggle_fullscreen,
+                Qt.Key.Key_Escape: self._exit_fullscreen,
+                Qt.Key.Key_Up: self._start_scroll_up,
+                Qt.Key.Key_Down: self._start_scroll_down,
+                Qt.Key.Key_PageUp: self._scroll_page_up,
+                Qt.Key.Key_PageDown: self._scroll_page_down,
+                Qt.Key.Key_R: self._reset_scroll,
+                Qt.Key.Key_M: self._toggle_mirror,
+            })
         else:
             self._view.page().runJavaScript(
                 "var c=document.querySelector('.content');"
@@ -520,6 +545,22 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
                 lambda html: self._save_inline_edit(html) if html else None
             )
             self._update_reading_line()
+            self._shortcut_mgr.set_shortcuts({
+                Qt.Key.Key_Space: self._toggle_play,
+                Qt.Key.Key_F1: self._toggle_control_panel,
+                Qt.Key.Key_F2: self._toggle_reading_line,
+                Qt.Key.Key_F11: self._toggle_fullscreen,
+                Qt.Key.Key_Escape: self._exit_fullscreen,
+                Qt.Key.Key_Up: self._start_scroll_up,
+                Qt.Key.Key_Down: self._start_scroll_down,
+                Qt.Key.Key_PageUp: self._scroll_page_up,
+                Qt.Key.Key_PageDown: self._scroll_page_down,
+                Qt.Key.Key_R: self._reset_scroll,
+                Qt.Key.Key_M: self._toggle_mirror,
+                Qt.Key.Key_Plus: self._speed_up,
+                Qt.Key.Key_Equal: self._speed_up,
+                Qt.Key.Key_Minus: self._speed_down,
+            })
 
     def _save_inline_edit(self, html: str):
         if not self._manuscript:

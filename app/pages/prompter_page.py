@@ -530,6 +530,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         from app.database import update_manuscript
         update_manuscript(self._manuscript.id, self._manuscript.title, html)
         self._manuscript.content = html
+        self._sync_mirror_if_open()
 
     def _on_back(self):
         self._pause()

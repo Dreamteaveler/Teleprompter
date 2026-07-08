@@ -34,19 +34,12 @@ class MainWindow(QMainWindow):
         self._stack = QStackedWidget()
         self.setCentralWidget(self._stack)
 
-        import time, os as _os
-        t0 = time.time()
         self._home = HomePage()
-        self._prompter = PrompterPage()
-        t1 = time.time()
         self._editor = EditorPage()
-        t2 = time.time()
-        with open(_os.path.expanduser(r"~\Desktop\启动日志.log"), "a", encoding="utf-8") as f:
-            f.write(f"  HomePage+PrompterPage: {t1-t0:.1f}s\n")
-            f.write(f"  EditorPage: {t2-t1:.1f}s\n")
+        self._prompter = None
+        self._prompter_created = False
 
         self._stack.addWidget(self._home)
-        self._stack.addWidget(self._prompter)
         self._stack.addWidget(self._editor)
 
         self._resizing = False
@@ -59,17 +52,23 @@ class MainWindow(QMainWindow):
         self._home.navigate_to_prompter.connect(self._on_navigate_to_prompter)
         self._home.navigate_to_editor.connect(self._on_navigate_to_editor)
 
-        self._prompter.back_to_home.connect(self._on_back_to_home)
-        self._prompter.completed.connect(self._on_prompter_completed)
-        self._prompter.edit_current_manuscript.connect(self._on_edit_current)
-
         self._editor.saved.connect(self._on_editor_saved)
         self._editor.cancelled.connect(self._on_editor_cancelled)
+
+    def _ensure_prompter(self):
+        if not self._prompter_created:
+            self._prompter = PrompterPage()
+            self._stack.insertWidget(self.PAGE_PROMPTER, self._prompter)
+            self._prompter.back_to_home.connect(self._on_back_to_home)
+            self._prompter.completed.connect(self._on_prompter_completed)
+            self._prompter.edit_current_manuscript.connect(self._on_edit_current)
+            self._prompter_created = True
 
     def _on_navigate_to_prompter(self, manuscript_id: int):
         manuscript = get_manuscript(manuscript_id)
         if not manuscript:
             return
+        self._ensure_prompter()
         self._prompter.load_manuscript(manuscript)
         self._stack.setCurrentIndex(self.PAGE_PROMPTER)
 
@@ -120,10 +119,10 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, event: QKeyEvent):
         key = event.key()
-        if key == Qt.Key.Key_F11:
+        if key == Qt.Key.Key_F11 and self._prompter:
             self._prompter._toggle_fullscreen()
             return
-        if key == Qt.Key.Key_Escape and self.isFullScreen():
+        if key == Qt.Key.Key_Escape and self.isFullScreen() and self._prompter:
             self._prompter._exit_fullscreen()
             return
         super().keyPressEvent(event)
@@ -153,12 +152,13 @@ class MainWindow(QMainWindow):
         if msg.exec() != QMessageBox.StandardButton.Yes:
             event.ignore()
             return
-        try:
-            self._prompter._save_settings()
-        except Exception:
-            pass
-        if self._prompter._mirror_window:
-            self._prompter._mirror_window.close()
-        if self._prompter._control_panel:
-            self._prompter._control_panel.close()
+        if self._prompter:
+            try:
+                self._prompter._save_settings()
+            except Exception:
+                pass
+            if self._prompter._mirror_window:
+                self._prompter._mirror_window.close()
+            if self._prompter._control_panel:
+                self._prompter._control_panel.close()
         event.accept()

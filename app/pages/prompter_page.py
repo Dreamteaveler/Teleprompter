@@ -511,9 +511,11 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._control_panel.set_inline_edit_state(self._inline_editing)
         if self._inline_editing:
             self._view.page().runJavaScript(
+                "var y=window.pageYOffset;"
                 "var c=document.querySelector('.content');"
                 "if(c){c.contentEditable='true';c.focus();}"
                 "document.body.style.userSelect='auto';"
+                "window.scrollTo(0,y);"
             )
         else:
             self._view.page().runJavaScript(

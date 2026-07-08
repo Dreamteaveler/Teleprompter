@@ -46,6 +46,21 @@ MathJax = {
     },
     options: {
         skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    },
+    startup: {
+        ready: function() {
+            MathJax.startup.defaultReady();
+            MathJax.startup.promise.then(function() {
+                var doc = MathJax.startup.document;
+                doc.getMathItemsWithin(document).forEach(function(item) {
+                    var mjx = item.typesetRoot;
+                    if (mjx && !mjx.hasAttribute('data-latex')) {
+                        var tex = item.math;
+                        mjx.setAttribute('data-latex', item.display ? '$$' + tex + '$$' : '$' + tex + '$');
+                    }
+                });
+            });
+        }
     }
 };
 </script>
@@ -81,6 +96,25 @@ MathJax = {
   });
   window.getReadingLineTop = function(){
     return window._readingLineTop || (window.innerHeight / 3);
+  };
+  window.getCleanContent = function() {
+    var c = document.querySelector('.content');
+    if (!c) return '';
+    var clone = c.cloneNode(true);
+    clone.querySelectorAll('mjx-container[data-latex]').forEach(function(mjx) {
+      mjx.parentNode.replaceChild(document.createTextNode(mjx.getAttribute('data-latex')), mjx);
+    });
+    return clone.innerHTML;
+  };
+  window.enterInlineEdit = function() {
+    var y = window.pageYOffset;
+    var c = document.querySelector('.content');
+    if (!c) return;
+    document.querySelectorAll('mjx-container').forEach(function(mjx){mjx.contentEditable='false';});
+    c.contentEditable = 'true';
+    c.focus();
+    document.body.style.userSelect = 'auto';
+    window.scrollTo(0, y);
   };
 })();
 </script>

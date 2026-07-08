@@ -48,10 +48,6 @@ class MainWindow(QMainWindow):
 
         self._connect_signals()
 
-        # 后台预加载 PrompterPage（WebEngine 初始化耗时3-4秒）
-        from PyQt6.QtCore import QTimer
-        QTimer.singleShot(200, self._ensure_prompter)
-
     def _connect_signals(self):
         self._home.navigate_to_prompter.connect(self._on_navigate_to_prompter)
         self._home.navigate_to_editor.connect(self._on_navigate_to_editor)

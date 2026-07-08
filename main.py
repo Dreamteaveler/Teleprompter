@@ -80,6 +80,10 @@ def main():
     window.show()
     _boot_log("窗口已显示")
 
+    # 后台预加载 WebEngine（窗口显示后 500ms 触发）
+    from PyQt6.QtCore import QTimer as _QTimer
+    _QTimer.singleShot(500, window._ensure_prompter)
+
     sys.exit(app.exec())
 
 

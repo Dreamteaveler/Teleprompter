@@ -82,7 +82,11 @@ def main():
 
     # 后台预加载 WebEngine（窗口显示后 500ms 触发）
     from PyQt6.QtCore import QTimer as _QTimer
-    _QTimer.singleShot(500, window._ensure_prompter)
+    def _preload():
+        _boot_log("开始后台预加载 WebEngine...")
+        window._ensure_prompter()
+        _boot_log("后台预加载完成")
+    _QTimer.singleShot(500, _preload)
 
     sys.exit(app.exec())
 

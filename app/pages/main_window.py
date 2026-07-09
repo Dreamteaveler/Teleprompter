@@ -11,7 +11,6 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QKeyEvent
-import os
 
 from app.database import get_manuscript
 from app.pages.home_page import HomePage
@@ -27,8 +26,6 @@ class MainWindow(QMainWindow):
     PAGE_EDITOR = 2
 
     def __init__(self):
-        import time as _t
-        _t0 = _t.time()
         super().__init__()
         self.setWindowTitle("提词器")
         self.setMinimumSize(960, 540)
@@ -38,13 +35,9 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self._stack)
 
         self._home = HomePage()
-        _t1 = _t.time()
         self._editor = EditorPage()
         self._prompter = None
         self._prompter_created = False
-
-        with open(os.path.expanduser(r"~\Desktop\启动日志.log"), "a", encoding="utf-8") as f:
-            f.write(f"  MainWindow-init: {_t.time()-_t0:.1f}s (HomePage:{_t1-_t0:.1f}s EditorPage:{_t.time()-_t1:.1f}s)\n")
 
         self._stack.addWidget(self._home)
         self._stack.addWidget(self._editor)

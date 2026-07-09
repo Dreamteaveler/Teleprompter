@@ -126,15 +126,8 @@ class HomePage(QWidget):
         self._relayout_timer = QTimer(self)
         self._relayout_timer.setSingleShot(True)
         self._relayout_timer.timeout.connect(self._render_cards)
-
-        import time as _t, os as _os
-        _t0 = _t.time()
         self._init_ui()
-        _t1 = _t.time()
         self._refresh()
-        _t2 = _t.time()
-        with open(_os.path.expanduser(r"~\Desktop\启动日志.log"), "a", encoding="utf-8") as f:
-            f.write(f"    HomePage: _init_ui={_t1-_t0:.1f}s _refresh={_t2-_t1:.1f}s\n")
 
     def _init_ui(self):
         layout = QVBoxLayout(self)

@@ -102,6 +102,14 @@ def build():
     if leftover.exists():
         leftover.unlink()
 
+    # 清理便携版中的调试资源文件（~80MB 无用）
+    for f in COLLECT_DIR.rglob("*debug.pak"):
+        f.unlink()
+        print(f"  已移除: {f.name}")
+    for f in COLLECT_DIR.rglob("*devtools_resources.pak"):
+        f.unlink()
+        print(f"  已移除: {f.name}")
+
     exe_path = DIST_DIR / EXE_NAME
     collect_path = COLLECT_DIR
     if exe_path.exists():

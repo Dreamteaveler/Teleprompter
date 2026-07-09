@@ -129,9 +129,13 @@ exe_portable = EXE(
     icon=str(ROOT / "text.ico"),
 )
 
+# ── 过滤掉调试资源文件（节省 ~80MB）──
+binaries = [(dest, src, typ) for dest, src, typ in a.binaries
+            if 'debug.pak' not in src and 'devtools_resources.pak' not in src]
+
 coll = COLLECT(
     exe_portable,
-    a.binaries,
+    binaries,
     a.datas,
     strip=False,
     upx=True,

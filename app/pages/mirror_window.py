@@ -200,6 +200,9 @@ class MirrorWindow(QMainWindow):
         if event.type() == QEvent.Type.WindowStateChange:
             self._reinstall_shortcuts()
             self.fullscreen_changed.emit(self.isFullScreen())
+            # 退出全屏时强制16:9 resize，防止窗口卡在全屏尺寸
+            if not self.isFullScreen():
+                QTimer.singleShot(100, self._on_fullscreen_stable)
         super().changeEvent(event)
 
     def showEvent(self, event):

@@ -88,7 +88,15 @@ class MirrorSyncMixin:
             self._control_panel.set_mirror_fullscreen_state(active)
 
     def _on_mirror_context_menu(self):
-        self._on_context_menu(self._view.pos())
+        from PyQt6.QtWidgets import QMenu
+        menu = QMenu(self._mirror_window)
+        panel_text = "关闭控制面板" if (self._control_panel and self._control_panel.isVisible()) else "打开控制面板"
+        menu.addAction(panel_text, self._toggle_control_panel)
+        rl_text = "关闭引导框" if self._reading_line_visible else "打开引导框"
+        menu.addAction(rl_text, self._toggle_reading_line)
+        mirror_text = "关闭镜像屏幕" if self._is_mirror_open else "打开镜像屏幕"
+        menu.addAction(mirror_text, self._toggle_mirror)
+        menu.exec(self._mirror_window.mapToGlobal(self._mirror_window.rect().center()))
 
     def _open_mirror(self):
         if self._mirror_window is None:

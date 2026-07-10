@@ -33,7 +33,6 @@ _FLIP_CSS = (
 class MirrorWindow(QMainWindow):
     resized = pyqtSignal()
     fullscreen_changed = pyqtSignal(bool)
-    context_menu_requested = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -61,8 +60,7 @@ class MirrorWindow(QMainWindow):
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.ErrorPageEnabled, False)
         self._view.loadFinished.connect(self._on_page_loaded)
-        self._view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._view.customContextMenuRequested.connect(self._on_context_menu)
+        self._view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.setCentralWidget(self._view)
 
     def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0):
@@ -163,9 +161,6 @@ class MirrorWindow(QMainWindow):
                 f"window.scrollTo(0, {self._pending_scroll_y})"
             )
         self.set_reading_line(self._pending_rl_y)
-
-    def _on_context_menu(self, _pos):
-        self.context_menu_requested.emit()
 
     def _toggle_fullscreen(self):
         self._resizing = True

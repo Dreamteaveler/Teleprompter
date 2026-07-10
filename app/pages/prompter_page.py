@@ -254,11 +254,14 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
 
     def _on_context_menu(self, pos):
         menu = QMenu(self)
-        menu.addAction("切换全屏", self._toggle_fullscreen)
-        menu.addAction("切换引导框", self._toggle_reading_line)
-        menu.addSeparator()
-        menu.addAction("播放 / 暂停", self._toggle_play)
-        menu.addAction("重置进度", self._reset_scroll)
+        panel_text = "关闭控制面板" if (self._control_panel and self._control_panel.isVisible()) else "打开控制面板"
+        menu.addAction(panel_text, self._toggle_control_panel)
+        rl_text = "关闭引导框" if self._reading_line_visible else "打开引导框"
+        menu.addAction(rl_text, self._toggle_reading_line)
+        mirror_text = "关闭镜像屏幕" if self._is_mirror_open else "打开镜像屏幕"
+        menu.addAction(mirror_text, self._toggle_mirror)
+        inline_text = "退出实时编辑" if getattr(self, '_inline_editing', False) else "打开实时编辑"
+        menu.addAction(inline_text, self._on_inline_edit)
         menu.exec(self._view.mapToGlobal(pos))
 
     def _refresh_scroll_height(self):

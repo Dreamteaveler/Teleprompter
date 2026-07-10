@@ -94,14 +94,8 @@ class MirrorSyncMixin:
             self._mirror_window.resized.connect(self._on_mirror_resized)
             self._mirror_window.fullscreen_changed.connect(self._on_mirror_fs_changed)
         self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip)
-        if getattr(self, '_mirror_was_fullscreen', False):
-            self._mirror_window.showFullScreen()
-            self._mirror_was_fullscreen = False
-            fullscreen = True
-        else:
-            self._mirror_window.showNormal()
-            fullscreen = False
-            self._position_mirror_on_secondary()
+        self._mirror_window.showNormal()
+        self._position_mirror_on_secondary()
         QTimer.singleShot(200, self._update_mirror_scale)
         self._is_mirror_open = True
         self._mirror_mode = True
@@ -110,7 +104,7 @@ class MirrorSyncMixin:
         self._start_sync_timer()
         if self._control_panel:
             self._control_panel.set_mirror_state(True)
-            self._control_panel.set_mirror_fullscreen_state(fullscreen)
+            self._control_panel.set_mirror_fullscreen_state(False)
 
     def _position_mirror_on_secondary(self):
         if not self._mirror_window:
@@ -143,8 +137,7 @@ class MirrorSyncMixin:
             self._mirror_mode = False
         self._stop_sync_timer()
         if self._mirror_window:
-            self._mirror_was_fullscreen = self._mirror_window.isFullScreen()
-            if self._mirror_was_fullscreen:
+            if self._mirror_window.isFullScreen():
                 self._mirror_window.showNormal()
             self._mirror_window.close()
             self._mirror_window.deleteLater()

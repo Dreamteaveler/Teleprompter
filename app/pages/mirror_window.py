@@ -193,6 +193,7 @@ class MirrorWindow(QMainWindow):
     def changeEvent(self, event):
         if event.type() == QEvent.Type.WindowStateChange:
             self._reinstall_shortcuts()
+            self.fullscreen_changed.emit(self.isFullScreen())
         super().changeEvent(event)
 
     def showEvent(self, event):

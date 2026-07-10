@@ -177,9 +177,11 @@ class MirrorWindow(QMainWindow):
     def _on_fullscreen_stable(self):
         self._resizing = False
         if not self.isFullScreen():
+            self._resizing = True
             w = self.width()
             h = max(540, int(w / ASPECT_RATIO))
             self.resize(w, h)
+            self._resizing = False
         self.resized.emit()
 
     def _force_resize_to_aspect(self):

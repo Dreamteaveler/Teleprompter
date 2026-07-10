@@ -104,6 +104,7 @@ class MirrorSyncMixin:
         self._start_sync_timer()
         if self._control_panel:
             self._control_panel.set_mirror_state(True)
+            self._control_panel.set_mirror_fullscreen_state(False)
 
     def _position_mirror_on_secondary(self):
         if not self._mirror_window:
@@ -136,11 +137,14 @@ class MirrorSyncMixin:
             self._mirror_mode = False
         self._stop_sync_timer()
         if self._mirror_window:
+            if self._mirror_window.isFullScreen():
+                self._mirror_window.showNormal()
             self._mirror_window.close()
             self._mirror_window.deleteLater()
             self._mirror_window = None
         if self._control_panel:
             self._control_panel.set_mirror_state(False)
+            self._control_panel.set_mirror_fullscreen_state(False)
 
     def _on_mirror_closed(self):
         self._mirror_window = None

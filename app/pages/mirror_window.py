@@ -60,6 +60,7 @@ class MirrorWindow(QMainWindow):
         settings.setAttribute(QWebEngineSettings.WebAttribute.LocalContentCanAccessFileUrls, True)
         settings.setAttribute(QWebEngineSettings.WebAttribute.ErrorPageEnabled, False)
         self._view.loadFinished.connect(self._on_page_loaded)
+        self._view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.setCentralWidget(self._view)
 
     def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0):

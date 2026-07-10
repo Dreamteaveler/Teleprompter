@@ -101,7 +101,7 @@ class MirrorSyncMixin:
         else:
             self._mirror_window.showNormal()
             fullscreen = False
-        self._position_mirror_on_secondary()
+            self._position_mirror_on_secondary()
         QTimer.singleShot(200, self._update_mirror_scale)
         self._is_mirror_open = True
         self._mirror_mode = True

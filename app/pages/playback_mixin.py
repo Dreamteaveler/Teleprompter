@@ -17,7 +17,7 @@ class PlaybackMixin:
 
     要求宿主类具有以下属性：
     - _manuscript, _is_playing, _page_ready
-    - _tick_frame, _last_tick_time, _pixels_per_second, _accumulated_scroll
+    - _tick_frame, _last_tick_time, _pixels_per_second, _accumulated_scroll, _pending_delta
     - _wpm, _font_size, _scroll_position, _scroll_height
     - _timer (QTimer), _view (QWebEngineView)
     - _control_panel, _auto_resume
@@ -39,6 +39,7 @@ class PlaybackMixin:
         self._refresh_scroll_height()
         self._last_tick_time = time.monotonic()
         self._accumulated_scroll = self._scroll_position
+        self._pending_delta = 0.0
         chars_per_minute = self._wpm * 2.5
         self._pixels_per_second = chars_per_minute / 60.0 * self._font_size * 0.6
         self._timer.start(16)
@@ -61,9 +62,14 @@ class PlaybackMixin:
         delta = elapsed * self._pixels_per_second
         self._accumulated_scroll += delta
         self._scroll_position = self._accumulated_scroll
-        self._view.page().runJavaScript(
-            f"window.scrollTo(0, {self._accumulated_scroll});"
-        )
+
+        self._pending_delta += delta
+        if abs(self._pending_delta) >= 1.0:
+            step = int(self._pending_delta)
+            self._view.page().runJavaScript(
+                f"window.scrollBy(0, {step});"
+            )
+            self._pending_delta -= step
 
         self._tick_frame += 1
 

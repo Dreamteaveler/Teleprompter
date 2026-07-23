@@ -59,6 +59,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._sync_pending: bool = False
         self._sync_version: int = 0
         self._accumulated_scroll: float = 0.0
+        self._pending_delta: float = 0.0
 
         self._mirror_window: MirrorWindow | None = None
         self._is_mirror_open = False

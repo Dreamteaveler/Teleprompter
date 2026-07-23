@@ -23,8 +23,8 @@ ROOT = Path(__file__).resolve().parent
 SPEC_FILE = ROOT / "Teleprompter.spec"
 DIST_DIR = ROOT / "dist"
 BUILD_DIR = ROOT / "build"
-EXE_NAME = "提词器1.11单文件版.exe"
-PORTABLE_NAME = "提词器1.11便携版"
+EXE_NAME = "提词器1.12单文件版.exe"
+PORTABLE_NAME = "提词器1.12便携版"
 COLLECT_DIR = DIST_DIR / PORTABLE_NAME
 
 

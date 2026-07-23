@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec file for 提词器 (Teleprompter) v1.11
+# PyInstaller spec file for 提词器 (Teleprompter) v1.12
 # 生成单个可执行文件
 
 import os

@@ -61,7 +61,9 @@ class PlaybackMixin:
         delta = elapsed * self._pixels_per_second
         self._accumulated_scroll += delta
         self._scroll_position = self._accumulated_scroll
-        self._view.page().runJavaScript(f"window.scrollBy(0, {delta});")
+        self._view.page().runJavaScript(
+            f"window.scrollTo(0, {self._accumulated_scroll});"
+        )
 
         self._tick_frame += 1
 

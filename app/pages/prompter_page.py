@@ -146,6 +146,24 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
 
         self._init_control_panel()
 
+    @staticmethod
+    def _fix_broken_emphasis(html: str) -> str:
+        """修复 markdown 解析产生的跨行/超长非预期 <em> 整段斜体。
+
+        合法斜体（公式符号、短语等）通常很短且不跨行；
+        若 <em> 内容包含 <br> 且长度 > 50 字符，或长度 > 200 字符，
+        则判定为解析错误，移除 <em> 包裹。
+        """
+        def _replacer(m):
+            content = m.group(1)
+            if '<br' in content and len(content) > 50:
+                return content
+            if len(content) > 200:
+                return content
+            return m.group(0)
+
+        return re.sub(r'<em>(.*?)</em>', _replacer, html, flags=re.DOTALL)
+
     def _build_html(self, text: str, scale: float = 1.0, vflip: bool = False) -> str:
         if not text or not text.strip():
             body = "<p style='color:#555;'>（空稿件）</p>"
@@ -167,6 +185,8 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             r'$\1$',
             body, flags=re.DOTALL,
         )
+
+        body = self._fix_broken_emphasis(body)
 
         fs = int(self._font_size * scale)
         lh = self._line_spacing

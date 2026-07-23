@@ -199,6 +199,6 @@ class PlaybackMixin:
 
     def _compute_scroll_speed(self, elapsed_seconds: float) -> float:
         base = self._font_size * 0.024
-        acceleration = elapsed_seconds ** 2 * self._font_size * 0.012
+        acceleration = elapsed_seconds ** 2.5 * self._font_size * 0.012
         max_speed = 240
         return min(max_speed, base + acceleration)

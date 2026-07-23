@@ -1,4 +1,4 @@
-# 提词器 (Teleprompter) v1.11
+# 提词器 (Teleprompter) v1.12
 
 专业桌面提词软件，适用于视频录制、直播、演讲、教学场景。支持稿件编辑、Word导入、公式渲染、自动滚动播放、镜像输出。
 
@@ -6,7 +6,7 @@
 
 - 稿件管理：创建、搜索、导入 Word(.docx)、删除
 - 富文本编辑：Markdown 语法、LaTeX 公式，编辑区字号独立调节
-- 提词播放：自动滚动（WPM 可控）、键盘变速滚动（t²·⁵ 加速曲线）、预估剩余时间
+- 提词播放：自动滚动（WPM 可控）、键盘变速滚动（t² 加速曲线）、预估剩余时间
 - 镜像模式：第二屏幕输出，多分辨率像素级同步（setZoomFactor），自动弹到副屏
 - 控制面板：浮动紧凑面板，参数调节（字号/行距/速度/边距/引导框透明度/主镜像全屏）
 - 视线引导框：可拖拽定位，透明度 0-100%，F2 快捷键开关
@@ -24,8 +24,8 @@ python main.py
 ```
 
 ### 打包版本
-- **单文件版**：下载 `Teleprompter-v1.11-Single.zip`，解压后双击 exe 运行
-- **便携版**：下载 `Teleprompter-v1.11-Portable.zip`，解压后运行文件夹内 `提词器.exe`
+- **单文件版**：下载 `Teleprompter-v1.12-Single.zip`，解压后双击 exe 运行
+- **便携版**：下载 `Teleprompter-v1.12-Portable.zip`，解压后运行文件夹内 `提词器.exe`
 
 均无需安装 Python 环境。下载地址：[Releases](https://github.com/Dreamteaveler/Teleprompter/releases)
 

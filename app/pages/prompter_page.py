@@ -206,6 +206,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         html = html.replace("__PX__", str(px))
         html = html.replace("__RLH__", str(rlh))
         html = html.replace("__RL_OPACITY__", str(self._reading_line_opacity))
+        html = html.replace("__RL_PE__", "none" if self._reading_line_opacity == 0 else "auto")
         html = html.replace("__BODY__", body)
         return html
 
@@ -512,8 +513,12 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
     def _on_reading_line_opacity_changed(self, opacity: float):
         self._reading_line_opacity = opacity
         color = f"rgba(219,157,22,{opacity})"
+        pe = "none" if opacity == 0 else "auto"
         self._view.page().runJavaScript(
-            'var rl=document.getElementById("rl");if(rl){rl.style.borderColor="' + color + '";}'
+            'var rl=document.getElementById("rl");if(rl){'
+            'rl.style.borderColor="' + color + '";'
+            'rl.style.pointerEvents="' + pe + '";'
+            '}'
         )
         if self._is_mirror_open and self._mirror_window:
             self._mirror_window.set_reading_line_opacity(opacity)

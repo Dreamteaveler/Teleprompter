@@ -198,9 +198,8 @@ QFrame#card {
 }
 
 QFrame#batchActionBar {
-    background-color: #141414;
-    border-top: 1px solid #2e2e2e;
-    border-bottom: 1px solid #2e2e2e;
+    background-color: transparent;
+    border: none;
 }
 
 QPushButton#dangerButton {
@@ -396,10 +395,34 @@ QSplitter::handle {
     width: 1px;
 }
 
-/* ─── Header Bar ─────────────────────────────── */
-QFrame#header {
+/* ─── Header Bars ────────────────────────────── */
+QFrame#globalHeader {
     background-color: rgba(13, 13, 13, 0.85);
     border-bottom: 1px solid #2e2e2e;
+}
+
+QLabel#appTitle {
+    color: #f2f2f2;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+QFrame#documentToolbar {
+    background-color: #101010;
+    border-bottom: 1px solid #2e2e2e;
+}
+
+QLabel#toolbarContext {
+    color: #f2f2f2;
+    font-weight: 600;
+}
+
+QLabel#filterHint {
+    color: #9e9e9e;
+    background-color: #1a1a1a;
+    border: 1px solid #2e2e2e;
+    border-radius: 8px;
+    padding: 3px 8px;
 }
 
 /* ─── Breadcrumb ──────────────────────────────── */

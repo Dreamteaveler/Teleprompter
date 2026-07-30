@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QScrollArea, QFrame, QSizePolicy, QMessageBox,
     QFileDialog, QMenu, QInputDialog, QCheckBox, QDialog,
+    QStackedLayout,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint
 from PyQt6.QtGui import (
@@ -292,64 +293,84 @@ class HomePage(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        header = QFrame()
-        header.setObjectName("header")
-        header.setFixedHeight(72)
-        header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(24, 12, 24, 12)
+        self._global_header = QFrame()
+        self._global_header.setObjectName("globalHeader")
+        self._global_header.setFixedHeight(64)
+        header_layout = QHBoxLayout(self._global_header)
+        header_layout.setContentsMargins(24, 10, 24, 10)
 
         logo = QLabel("提词器")
-        logo.setStyleSheet("font-size: 18px; font-weight: 700; color: #f2f2f2;")
+        logo.setObjectName("appTitle")
         header_layout.addWidget(logo)
 
         header_layout.addStretch()
 
-        self._search_input = QLineEdit()
-        self._search_input.setObjectName("searchField")
-        self._search_input.setPlaceholderText("🔍 搜索稿件...")
-        self._search_input.setFixedWidth(260)
-        self._search_input.setFixedHeight(36)
-        self._search_input.textChanged.connect(self._on_search)
-        header_layout.addWidget(self._search_input)
-
-        self._batch_manage_button = QPushButton("批量管理")
-        self._batch_manage_button.setObjectName("ghostButton")
-        self._batch_manage_button.setCursor(
+        self._new_manuscript_button = QPushButton("新建稿件")
+        self._new_manuscript_button.setObjectName("accentButton")
+        self._new_manuscript_button.setCursor(
             Qt.CursorShape.PointingHandCursor
         )
-        self._batch_manage_button.clicked.connect(self._toggle_batch_mode)
-        header_layout.addWidget(self._batch_manage_button)
+        self._new_manuscript_button.clicked.connect(
+            lambda: self.navigate_to_editor.emit(None)
+        )
+        header_layout.addWidget(self._new_manuscript_button)
 
-        new_folder_btn = QPushButton("📁 新建文件夹")
-        new_folder_btn.setObjectName("ghostButton")
-        new_folder_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        new_folder_btn.clicked.connect(self._on_new_folder)
-        header_layout.addWidget(new_folder_btn)
+        self._import_button = QPushButton("导入文件")
+        self._import_button.setObjectName("ghostButton")
+        self._import_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._import_button.clicked.connect(self._import_file_dialog)
+        header_layout.addWidget(self._import_button)
 
-        import_btn = QPushButton("+ 新建稿件")
-        import_btn.setObjectName("ghostButton")
-        import_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        import_btn.clicked.connect(lambda: self.navigate_to_editor.emit(None))
-        header_layout.addWidget(import_btn)
+        layout.addWidget(self._global_header)
 
-        new_btn = QPushButton("📄 导入文件")
-        new_btn.setObjectName("accentButton")
-        new_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        new_btn.clicked.connect(self._import_file_dialog)
-        header_layout.addWidget(new_btn)
+        self._document_toolbar = QFrame()
+        self._document_toolbar.setObjectName("documentToolbar")
+        self._document_toolbar.setFixedHeight(52)
+        self._toolbar_stack = QStackedLayout(self._document_toolbar)
+        self._toolbar_stack.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(header)
+        self._normal_toolbar = QWidget()
+        normal_layout = QHBoxLayout(self._normal_toolbar)
+        normal_layout.setContentsMargins(40, 8, 40, 8)
+        normal_layout.setSpacing(8)
 
         self._breadcrumb = QWidget()
-        self._breadcrumb.setFixedHeight(36)
         self._breadcrumb.setStyleSheet(
             "QWidget { background-color: transparent; }"
         )
         breadcrumb_layout = QHBoxLayout(self._breadcrumb)
-        breadcrumb_layout.setContentsMargins(40, 4, 40, 4)
+        breadcrumb_layout.setContentsMargins(0, 0, 0, 0)
         breadcrumb_layout.setSpacing(4)
         breadcrumb_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        layout.addWidget(self._breadcrumb)
+        normal_layout.addWidget(self._breadcrumb, 1)
+
+        self._search_input = QLineEdit()
+        self._search_input.setObjectName("searchField")
+        self._search_input.setPlaceholderText("搜索稿件…")
+        self._search_input.setMinimumWidth(180)
+        self._search_input.setMaximumWidth(360)
+        self._search_input.setFixedHeight(36)
+        self._search_input.textChanged.connect(self._on_search)
+        normal_layout.addWidget(self._search_input, 1)
+
+        self._new_folder_button = QPushButton("新建文件夹")
+        self._new_folder_button.setObjectName("ghostButton")
+        self._new_folder_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        self._new_folder_button.clicked.connect(self._on_new_folder)
+        normal_layout.addWidget(self._new_folder_button)
+
+        self._organize_button = QPushButton("整理稿件")
+        self._organize_button.setObjectName("ghostButton")
+        self._organize_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        self._organize_button.clicked.connect(self._toggle_batch_mode)
+        normal_layout.addWidget(self._organize_button)
+        self._batch_manage_button = self._organize_button
+
+        self._toolbar_stack.addWidget(self._normal_toolbar)
 
         self._batch_bar = BatchActionBar()
         self._batch_bar.select_all_toggled.connect(self._select_all_visible)
@@ -360,8 +381,10 @@ class HomePage(QWidget):
             self._delete_selected_manuscripts
         )
         self._batch_bar.exit_requested.connect(self._exit_batch_mode)
-        self._batch_bar.hide()
-        layout.addWidget(self._batch_bar)
+        self._toolbar_stack.addWidget(self._batch_bar)
+        self._toolbar_stack.setCurrentWidget(self._normal_toolbar)
+
+        layout.addWidget(self._document_toolbar)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -373,7 +396,7 @@ class HomePage(QWidget):
         self._scroll_layout.setContentsMargins(40, 16, 40, 24)
         self._scroll_layout.setSpacing(16)
 
-        self._count_label = QLabel("全部稿件")
+        self._count_label = QLabel("共 0 项")
         self._count_label.setObjectName("sectionTitle")
         self._scroll_layout.addWidget(self._count_label)
 
@@ -698,12 +721,7 @@ class HomePage(QWidget):
         self._scroll_layout.insertWidget(1, self._cards_widget)
 
         total_items = len(sub_folders) + len(self._manuscripts)
-        if self._current_folder_id is not None:
-            folder = get_folder(self._current_folder_id)
-            label = f"「{folder.name}」（共 {total_items} 项）" if folder else f"（共 {total_items} 项）"
-        else:
-            label = f"全部稿件（共 {total_items} 项）"
-        self._count_label.setText(label)
+        self._count_label.setText(f"共 {total_items} 项")
 
         if total_items == 0:
             empty = QWidget()

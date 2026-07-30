@@ -212,6 +212,6 @@ def _dump_window_events():
         path = os.path.join(os.path.expanduser("~"), "Desktop", "teleprompter_windows.log")
         with open(path, "w", encoding="utf-8") as f:
             f.write("\n".join(events) + "\n")
-        logger.info(f"窗口事件已写入: {path} ({len(events)} 条)")
+        logger.warning(f"窗口事件已写入: {path} ({len(events)} 条)")
     except Exception as e:
-        logger.error(f"写入窗口事件失败: {e}")
+        logger.warning(f"写入窗口事件失败: {e}")

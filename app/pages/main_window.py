@@ -200,11 +200,18 @@ class MainWindow(QMainWindow):
 
 
 def _dump_window_events():
+    import sys
     try:
-        import main as _m
-        if _m._WINDOW_EVENTS:
-            path = os.path.join(os.path.expanduser("~"), "Desktop", "teleprompter_windows.log")
-            with open(path, "w", encoding="utf-8") as f:
-                f.write("\n".join(_m._WINDOW_EVENTS))
-    except Exception:
-        pass
+        m = sys.modules.get('main')
+        if m is None:
+            import main as _m
+            m = _m
+        events = getattr(m, '_WINDOW_EVENTS', [])
+        if not events:
+            return
+        path = os.path.join(os.path.expanduser("~"), "Desktop", "teleprompter_windows.log")
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(events) + "\n")
+        logger.info(f"窗口事件已写入: {path} ({len(events)} 条)")
+    except Exception as e:
+        logger.error(f"写入窗口事件失败: {e}")

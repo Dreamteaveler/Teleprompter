@@ -211,7 +211,7 @@ def list_manuscripts(folder_id: int | None = None) -> list[Manuscript]:
     with get_connection() as conn:
         if folder_id is None:
             rows = conn.execute(
-                "SELECT * FROM manuscripts ORDER BY updated_at DESC"
+                "SELECT * FROM manuscripts WHERE parent_folder_id IS NULL ORDER BY updated_at DESC"
             ).fetchall()
         else:
             rows = conn.execute(

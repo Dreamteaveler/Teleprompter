@@ -790,94 +790,94 @@ class HomePage(QWidget):
             self._visible_manuscript_ids()
         )
 
-        old_widget = self._cards_widget
-        old_widget.hide()
-        self._scroll_layout.removeWidget(old_widget)
-        old_widget.deleteLater()
+        self.setUpdatesEnabled(False)
+        try:
+            old_widget = self._cards_widget
+            old_widget.hide()
+            self._scroll_layout.removeWidget(old_widget)
+            old_widget.deleteLater()
 
-        self._cards_widget = QWidget()
-        self._cards_layout = QVBoxLayout(self._cards_widget)
-        self._cards_layout.setSpacing(12)
-        self._cards_layout.setContentsMargins(0, 0, 0, 0)
-        self._scroll_layout.insertWidget(1, self._cards_widget)
+            self._cards_widget = QWidget()
+            self._cards_layout = QVBoxLayout(self._cards_widget)
+            self._cards_layout.setSpacing(12)
+            self._cards_layout.setContentsMargins(0, 0, 0, 0)
+            self._scroll_layout.insertWidget(1, self._cards_widget)
 
-        total_items = len(sub_folders) + len(self._manuscripts)
-        self._count_label.setText(f"共 {total_items} 项")
+            total_items = len(sub_folders) + len(self._manuscripts)
+            self._count_label.setText(f"共 {total_items} 项")
 
-        if total_items == 0:
-            empty = QWidget()
-            empty.setAcceptDrops(True)
-            empty_layout = QVBoxLayout(empty)
-            empty_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty_layout.setSpacing(16)
+            if total_items == 0:
+                empty = QWidget()
+                empty.setAcceptDrops(True)
+                empty_layout = QVBoxLayout(empty)
+                empty_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                empty_layout.setSpacing(16)
 
-            icon = QLabel("📄")
-            icon.setFont(QFont("Segoe UI Emoji", 48))
-            icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty_layout.addWidget(icon)
+                icon = QLabel("📄")
+                icon.setFont(QFont("Segoe UI Emoji", 48))
+                icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                empty_layout.addWidget(icon)
 
-            msg = QLabel("暂无内容\n拖放文件到此处导入，或点击右上角按钮创建")
-            msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            msg.setObjectName("mutedLabel")
-            msg.setStyleSheet("font-size: 15px; line-height: 1.8;")
-            empty_layout.addWidget(msg)
+                msg = QLabel("暂无内容\n拖放文件到此处导入，或点击右上角按钮创建")
+                msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                msg.setObjectName("mutedLabel")
+                msg.setStyleSheet("font-size: 15px; line-height: 1.8;")
+                empty_layout.addWidget(msg)
 
-            self._cards_layout.addWidget(empty)
+                self._cards_layout.addWidget(empty)
+                self._update_batch_bar()
+                return
+
+            items = []
+            for f in sub_folders:
+                items.append(("folder", f))
+            for ms in self._manuscripts:
+                items.append(("manuscript", ms))
+
+            items.sort(key=lambda x: x[1].updated_at if x[1].updated_at else "", reverse=True)
+
+            row_layout = None
+            card_spacing = 12
+            win = self.window()
+            available_width = (win.width() if win else 1280) - 80
+            if available_width <= 100:
+                available_width = 1100
+            row_width = 0
+
+            for item_type, item in items:
+                if row_layout is None or row_width + CARD_WIDTH > available_width:
+                    if row_layout is not None:
+                        row_layout.addStretch()
+                    row_layout = QHBoxLayout()
+                    row_layout.setSpacing(card_spacing)
+                    row_layout.setContentsMargins(0, 0, 0, 0)
+                    self._cards_layout.addLayout(row_layout)
+                    row_width = 0
+
+                if item_type == "folder":
+                    card = FolderCard(item)
+                    card.folder_clicked.connect(self._on_folder_selected)
+                    card.folder_context_menu.connect(self._on_folder_card_context_menu)
+                else:
+                    card = ManuscriptCard(item)
+                    card.play_clicked.connect(self.navigate_to_prompter.emit)
+                    card.edit_clicked.connect(lambda mid: self.navigate_to_editor.emit(
+                        next((m for m in self._manuscripts if m.id == mid), None)
+                    ))
+                    card.delete_clicked.connect(self._confirm_delete)
+                    card.selection_toggled.connect(
+                        self._toggle_manuscript_selection
+                    )
+
+                row_layout.addWidget(card)
+                row_width += CARD_WIDTH + card_spacing
+
+            if row_layout is not None:
+                row_layout.addStretch()
+            self._cards_layout.addStretch()
             self._update_batch_bar()
-            return
-
-        items = []
-        for f in sub_folders:
-            items.append(("folder", f))
-        for ms in self._manuscripts:
-            items.append(("manuscript", ms))
-
-        items.sort(key=lambda x: x[1].updated_at if x[1].updated_at else "", reverse=True)
-
-        row_layout = None
-        card_spacing = 12
-        win = self.window()
-        available_width = (win.width() if win else 1280) - 80
-        if available_width <= 100:
-            available_width = 1100
-        row_width = 0
-
-        for item_type, item in items:
-            if row_layout is None or row_width + CARD_WIDTH > available_width:
-                if row_layout is not None:
-                    row_layout.addStretch()
-                row_layout = QHBoxLayout()
-                row_layout.setSpacing(card_spacing)
-                row_layout.setContentsMargins(0, 0, 0, 0)
-                self._cards_layout.addLayout(row_layout)
-                row_width = 0
-
-            if item_type == "folder":
-                card = FolderCard(item)
-                card.folder_clicked.connect(self._on_folder_selected)
-                card.folder_context_menu.connect(self._on_folder_card_context_menu)
-            else:
-                card = ManuscriptCard(
-                    item,
-                    batch_mode=self._batch_mode,
-                    selected=item.id in self._selected_manuscript_ids,
-                )
-                card.play_clicked.connect(self.navigate_to_prompter.emit)
-                card.edit_clicked.connect(lambda mid: self.navigate_to_editor.emit(
-                    next((m for m in self._manuscripts if m.id == mid), None)
-                ))
-                card.delete_clicked.connect(self._confirm_delete)
-                card.selection_toggled.connect(
-                    self._toggle_manuscript_selection
-                )
-
-            row_layout.addWidget(card)
-            row_width += CARD_WIDTH + card_spacing
-
-        if row_layout is not None:
-            row_layout.addStretch()
-        self._cards_layout.addStretch()
-        self._update_batch_bar()
+        finally:
+            self.setUpdatesEnabled(True)
 
     def _move_selected_to_folder(
         self,

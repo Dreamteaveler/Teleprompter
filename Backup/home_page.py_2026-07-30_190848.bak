@@ -9,27 +9,23 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QScrollArea, QFrame, QSizePolicy, QMessageBox,
-    QFileDialog, QMenu, QInputDialog, QCheckBox, QDialog,
+    QFileDialog, QMenu, QInputDialog,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint
-from PyQt6.QtGui import (
-    QFont, QAction, QDragEnterEvent, QDropEvent, QKeySequence, QShortcut,
-)
+from PyQt6.QtGui import QFont, QAction, QDragEnterEvent, QDropEvent
 
 import os
 import re
 
 from app.database import (
-    list_manuscripts, search_manuscripts, delete_manuscript,
-    delete_manuscripts, create_manuscript,
+    list_manuscripts, search_manuscripts, delete_manuscript, create_manuscript,
     list_folders, get_folder, create_folder, rename_folder, delete_folder,
-    get_folder_path, get_manuscript_count_in_folder, move_manuscripts,
+    get_folder_path, get_manuscript_count_in_folder, move_manuscript,
 )
 from app.models import Manuscript, Folder
 from app.file_importer import import_file
 from app.html_cleaner import clean_imported_html
 from app.image_utils import compress_images_in_html
-from app.widgets.batch_management import BatchActionBar, FolderPickerDialog
 
 
 CARD_WIDTH = 240
@@ -41,21 +37,10 @@ class ManuscriptCard(QFrame):
     edit_clicked = pyqtSignal(int)
     delete_clicked = pyqtSignal(int)
     play_clicked = pyqtSignal(int)
-    selection_toggled = pyqtSignal(int, bool)
 
-    def __init__(
-        self,
-        manuscript: Manuscript,
-        parent=None,
-        *,
-        batch_mode: bool = False,
-        selected: bool = False,
-    ):
+    def __init__(self, manuscript: Manuscript, parent=None):
         super().__init__(parent)
         self._manuscript = manuscript
-        self._batch_mode = batch_mode
-        self._selected = selected
-        self._hovered = False
         self.setObjectName("card")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFixedSize(CARD_WIDTH, CARD_HEIGHT)
@@ -65,17 +50,6 @@ class ManuscriptCard(QFrame):
         layout.setSpacing(4)
 
         top_row = QHBoxLayout()
-        self.selection_checkbox = QCheckBox()
-        self.selection_checkbox.setToolTip("选择这篇讲稿")
-        self.selection_checkbox.setAccessibleName(
-            f"选择讲稿：{manuscript.title or '未命名稿件'}"
-        )
-        self.selection_checkbox.setVisible(batch_mode)
-        self.selection_checkbox.toggled.connect(
-            self._on_selection_checkbox_toggled
-        )
-        top_row.addWidget(self.selection_checkbox)
-
         icon = QLabel("📄")
         icon.setFont(QFont("Segoe UI Emoji", 14))
         top_row.addWidget(icon)
@@ -86,25 +60,19 @@ class ManuscriptCard(QFrame):
             "QPushButton:hover { color: #f2f2f2; }"
         )
 
-        self._edit_button = QPushButton("编辑")
-        self._edit_button.setStyleSheet(action_btn_style)
-        self._edit_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._edit_button.clicked.connect(
-            lambda: self.edit_clicked.emit(self._manuscript.id)
-        )
-        self._edit_button.setVisible(not batch_mode)
-        top_row.addWidget(self._edit_button)
+        edit_btn = QPushButton("编辑")
+        edit_btn.setStyleSheet(action_btn_style)
+        edit_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        edit_btn.clicked.connect(lambda: self.edit_clicked.emit(self._manuscript.id))
+        top_row.addWidget(edit_btn)
 
-        self._delete_button = QPushButton("删除")
-        self._delete_button.setStyleSheet(
+        delete_btn = QPushButton("删除")
+        delete_btn.setStyleSheet(
             action_btn_style + "QPushButton:hover { color: #ef4444; }"
         )
-        self._delete_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._delete_button.clicked.connect(
-            lambda: self.delete_clicked.emit(self._manuscript.id)
-        )
-        self._delete_button.setVisible(not batch_mode)
-        top_row.addWidget(self._delete_button)
+        delete_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        delete_btn.clicked.connect(lambda: self.delete_clicked.emit(self._manuscript.id))
+        top_row.addWidget(delete_btn)
 
         layout.addLayout(top_row)
 
@@ -133,60 +101,25 @@ class ManuscriptCard(QFrame):
         footer.addWidget(time_label)
         layout.addLayout(footer)
 
-        self.set_selected(selected)
-
-    def _on_selection_checkbox_toggled(self, selected: bool):
-        self._selected = selected
-        self._apply_card_style()
-        self.selection_toggled.emit(self._manuscript.id, selected)
-
-    def is_selected(self) -> bool:
-        return self._selected
-
-    def set_selected(self, selected: bool):
-        self._selected = selected
-        was_blocked = self.selection_checkbox.blockSignals(True)
-        self.selection_checkbox.setChecked(selected)
-        self.selection_checkbox.blockSignals(was_blocked)
-        self._apply_card_style()
-
-    def _apply_card_style(self):
-        if self._selected:
-            border = "2px solid #DB9D16"
-            background = "rgba(219, 157, 22, 0.12)"
-        elif self._hovered:
-            border = "1px solid rgba(219, 157, 22, 0.5)"
-            background = "#171717"
-        else:
-            border = "1px solid #2e2e2e"
-            background = "#141414"
-        self.setStyleSheet(
-            f"""QFrame#card {{
-                background-color: {background};
-                border: {border};
-                border-radius: 12px;
-            }}"""
-        )
-
     def enterEvent(self, event):
         super().enterEvent(event)
-        self._hovered = True
-        self._apply_card_style()
+        self.setStyleSheet("""QFrame#card {
+            border-color: rgba(219, 157, 22, 0.5);
+            background-color: #171717;
+            border-radius: 12px;
+        }""")
 
     def leaveEvent(self, event):
         super().leaveEvent(event)
-        self._hovered = False
-        self._apply_card_style()
+        self.setStyleSheet("""QFrame#card {
+            background-color: #141414;
+            border: 1px solid #2e2e2e;
+            border-radius: 12px;
+        }""")
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            if self._batch_mode:
-                self.selection_checkbox.toggle()
-            else:
-                self.play_clicked.emit(self._manuscript.id)
-            event.accept()
-            return
-        super().mousePressEvent(event)
+            self.play_clicked.emit(self._manuscript.id)
 
 
 class FolderCard(QFrame):
@@ -279,8 +212,6 @@ class HomePage(QWidget):
         self._manuscripts: list[Manuscript] = []
         self._current_folder_id: int | None = None
         self._folder_path: list[Folder] = []
-        self._batch_mode = False
-        self._selected_manuscript_ids: set[int] = set()
         self._relayout_timer = QTimer(self)
         self._relayout_timer.setSingleShot(True)
         self._relayout_timer.timeout.connect(self._render_cards)
@@ -311,14 +242,6 @@ class HomePage(QWidget):
         self._search_input.setFixedHeight(36)
         self._search_input.textChanged.connect(self._on_search)
         header_layout.addWidget(self._search_input)
-
-        self._batch_manage_button = QPushButton("批量管理")
-        self._batch_manage_button.setObjectName("ghostButton")
-        self._batch_manage_button.setCursor(
-            Qt.CursorShape.PointingHandCursor
-        )
-        self._batch_manage_button.clicked.connect(self._toggle_batch_mode)
-        header_layout.addWidget(self._batch_manage_button)
 
         new_folder_btn = QPushButton("📁 新建文件夹")
         new_folder_btn.setObjectName("ghostButton")
@@ -351,18 +274,6 @@ class HomePage(QWidget):
         breadcrumb_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self._breadcrumb)
 
-        self._batch_bar = BatchActionBar()
-        self._batch_bar.select_all_toggled.connect(self._select_all_visible)
-        self._batch_bar.move_requested.connect(
-            self._move_selected_manuscripts
-        )
-        self._batch_bar.delete_requested.connect(
-            self._delete_selected_manuscripts
-        )
-        self._batch_bar.exit_requested.connect(self._exit_batch_mode)
-        self._batch_bar.hide()
-        layout.addWidget(self._batch_bar)
-
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -391,80 +302,6 @@ class HomePage(QWidget):
         self._drop_overlay.hide()
         self.setAcceptDrops(True)
 
-        self._batch_escape_shortcut = QShortcut(
-            QKeySequence("Esc"),
-            self,
-        )
-        self._batch_escape_shortcut.setContext(
-            Qt.ShortcutContext.WidgetWithChildrenShortcut
-        )
-        self._batch_escape_shortcut.activated.connect(
-            self._handle_batch_escape
-        )
-
-    def _toggle_batch_mode(self, checked: bool = False):
-        if self._batch_mode:
-            self._exit_batch_mode()
-        else:
-            self._enter_batch_mode()
-
-    def _enter_batch_mode(self):
-        if self._batch_mode:
-            return
-        self._batch_mode = True
-        self._selected_manuscript_ids.clear()
-        self._batch_bar.show()
-        self._batch_manage_button.setText("退出批量管理")
-        self._render_cards()
-
-    def _exit_batch_mode(self, render: bool = True):
-        was_active = self._batch_mode or bool(
-            self._selected_manuscript_ids
-        )
-        self._batch_mode = False
-        self._selected_manuscript_ids.clear()
-        self._batch_bar.hide()
-        self._batch_manage_button.setText("批量管理")
-        if render and was_active:
-            self._render_cards()
-
-    def _handle_batch_escape(self):
-        if self._batch_mode:
-            self._exit_batch_mode()
-
-    def _visible_manuscript_ids(self) -> set[int]:
-        return {manuscript.id for manuscript in self._manuscripts}
-
-    def _update_batch_bar(self):
-        self._batch_bar.set_selection_state(
-            selected_count=len(self._selected_manuscript_ids),
-            visible_count=len(self._manuscripts),
-        )
-
-    def _toggle_manuscript_selection(
-        self,
-        manuscript_id: int,
-        selected: bool,
-    ):
-        if manuscript_id not in self._visible_manuscript_ids():
-            return
-        if selected:
-            self._selected_manuscript_ids.add(manuscript_id)
-        else:
-            self._selected_manuscript_ids.discard(manuscript_id)
-        self._update_batch_bar()
-
-    def _select_all_visible(self, selected: bool):
-        if not self._batch_mode:
-            return
-        if selected:
-            self._selected_manuscript_ids = (
-                self._visible_manuscript_ids()
-            )
-        else:
-            self._selected_manuscript_ids.clear()
-        self._render_cards()
-
     def _on_new_folder(self):
         name, ok = QInputDialog.getText(self, "新建文件夹", "文件夹名称：")
         if ok and name.strip():
@@ -472,7 +309,6 @@ class HomePage(QWidget):
             self._refresh()
 
     def _on_folder_selected(self, folder_id: int):
-        self._exit_batch_mode(render=False)
         self._current_folder_id = folder_id
         self._search_input.clear()
         self._folder_path = get_folder_path(folder_id)
@@ -480,7 +316,6 @@ class HomePage(QWidget):
         self._refresh()
 
     def _on_root_selected(self):
-        self._exit_batch_mode(render=False)
         self._current_folder_id = None
         self._search_input.clear()
         self._folder_path = []
@@ -488,7 +323,6 @@ class HomePage(QWidget):
         self._refresh()
 
     def _on_breadcrumb_click(self, folder_id: int | None):
-        self._exit_batch_mode(render=False)
         self._current_folder_id = folder_id
         self._search_input.clear()
         if folder_id is not None:
@@ -679,7 +513,6 @@ class HomePage(QWidget):
             QMessageBox.warning(self, "导入失败", f"无法导入文件：\n{e}")
 
     def _on_search(self, text: str):
-        self._exit_batch_mode(render=False)
         if text.strip():
             self._manuscripts = search_manuscripts(text.strip(), folder_id=self._current_folder_id)
         else:
@@ -696,10 +529,6 @@ class HomePage(QWidget):
             sub_folders = list_folders(parent_id=self._current_folder_id)
         else:
             sub_folders = list_folders(parent_id=None)
-
-        self._selected_manuscript_ids.intersection_update(
-            self._visible_manuscript_ids()
-        )
 
         old_widget = self._cards_widget
         old_widget.hide()
@@ -739,7 +568,6 @@ class HomePage(QWidget):
             empty_layout.addWidget(msg)
 
             self._cards_layout.addWidget(empty)
-            self._update_batch_bar()
             return
 
         items = []
@@ -773,19 +601,12 @@ class HomePage(QWidget):
                 card.folder_clicked.connect(self._on_folder_selected)
                 card.folder_context_menu.connect(self._on_folder_card_context_menu)
             else:
-                card = ManuscriptCard(
-                    item,
-                    batch_mode=self._batch_mode,
-                    selected=item.id in self._selected_manuscript_ids,
-                )
+                card = ManuscriptCard(item)
                 card.play_clicked.connect(self.navigate_to_prompter.emit)
                 card.edit_clicked.connect(lambda mid: self.navigate_to_editor.emit(
                     next((m for m in self._manuscripts if m.id == mid), None)
                 ))
                 card.delete_clicked.connect(self._confirm_delete)
-                card.selection_toggled.connect(
-                    self._toggle_manuscript_selection
-                )
 
             row_layout.addWidget(card)
             row_width += CARD_WIDTH + card_spacing
@@ -793,110 +614,6 @@ class HomePage(QWidget):
         if row_layout is not None:
             row_layout.addStretch()
         self._cards_layout.addStretch()
-        self._update_batch_bar()
-
-    def _move_selected_to_folder(
-        self,
-        target_folder_id: int | None,
-    ) -> int:
-        manuscript_ids = tuple(self._selected_manuscript_ids)
-        if not manuscript_ids:
-            return 0
-        moved = move_manuscripts(manuscript_ids, target_folder_id)
-        self._exit_batch_mode(render=False)
-        self._refresh()
-        return moved
-
-    def _move_selected_manuscripts(self):
-        if not self._selected_manuscript_ids:
-            return
-
-        dialog = FolderPickerDialog(self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
-
-        try:
-            moved = self._move_selected_to_folder(
-                dialog.selected_folder_id()
-            )
-        except Exception as error:
-            QMessageBox.warning(
-                self,
-                "移动失败",
-                f"无法移动所选讲稿：\n{error}",
-            )
-            return
-
-        QMessageBox.information(
-            self,
-            "移动完成",
-            f"已移动 {moved} 篇讲稿。",
-        )
-
-    def _selected_manuscripts(self) -> list[Manuscript]:
-        return [
-            manuscript
-            for manuscript in self._manuscripts
-            if manuscript.id in self._selected_manuscript_ids
-        ]
-
-    @staticmethod
-    def _batch_delete_message(selected: list[Manuscript]) -> str:
-        titles = [
-            manuscript.title or "未命名稿件"
-            for manuscript in selected
-        ]
-        preview = "\n".join(
-            f"• {title}" for title in titles[:5]
-        )
-        remainder = len(titles) - 5
-        if remainder > 0:
-            preview += f"\n• 另有 {remainder} 篇"
-        return (
-            f"确定要永久删除选中的 {len(titles)} 篇讲稿吗？\n\n"
-            f"{preview}\n\n此操作不可撤销。"
-        )
-
-    def _delete_selected_now(self) -> int:
-        manuscript_ids = tuple(self._selected_manuscript_ids)
-        if not manuscript_ids:
-            return 0
-        deleted = delete_manuscripts(manuscript_ids)
-        self._exit_batch_mode(render=False)
-        self._refresh()
-        return deleted
-
-    def _delete_selected_manuscripts(self):
-        selected = self._selected_manuscripts()
-        if not selected:
-            return
-
-        reply = QMessageBox.question(
-            self,
-            "确认批量删除",
-            self._batch_delete_message(selected),
-            QMessageBox.StandardButton.Yes
-            | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
-
-        try:
-            deleted = self._delete_selected_now()
-        except Exception as error:
-            QMessageBox.warning(
-                self,
-                "删除失败",
-                f"无法删除所选讲稿：\n{error}",
-            )
-            return
-
-        QMessageBox.information(
-            self,
-            "删除完成",
-            f"已删除 {deleted} 篇讲稿。",
-        )
 
     def _confirm_delete(self, manuscript_id: int):
         ms = next((m for m in self._manuscripts if m.id == manuscript_id), None)

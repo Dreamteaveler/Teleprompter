@@ -21,10 +21,6 @@ if sys.stdout is not None:
 if sys.stderr is not None:
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='surrogateescape')
 
-# ── 消除 WebEngine GPU 进程窗口闪烁 ──
-os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --disable-software-rasterizer"
-os.environ["QSG_RENDER_LOOP"] = "basic"
-
 logging.basicConfig(
     level=logging.WARNING,
     format='%(asctime)s.%(msecs)03d [%(name)s] %(levelname)s: %(message)s',

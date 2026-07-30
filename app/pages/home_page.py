@@ -803,6 +803,9 @@ class HomePage(QWidget):
 
         self.setUpdatesEnabled(False)
         try:
+            # 先隐藏旧卡片的子控件，防止 deleteLater 时闪现
+            for child in self._cards_widget.findChildren(QWidget):
+                child.hide()
             old_widget = self._cards_widget
             old_widget.hide()
             self._scroll_layout.removeWidget(old_widget)

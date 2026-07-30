@@ -6,6 +6,7 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtCore import QPoint
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QApplication, QPushButton
 
 from app import database
@@ -85,6 +86,63 @@ class HomePageNavigationTest(unittest.TestCase):
             page._organize_button,
         ):
             self.assertTrue(page._normal_toolbar.isAncestorOf(control))
+
+    def test_import_is_the_only_accented_global_action(self):
+        page = self._create_page()
+        global_actions = (
+            page._new_manuscript_button,
+            page._import_button,
+        )
+
+        accented_actions = [
+            button.text()
+            for button in global_actions
+            if button.objectName() == "accentButton"
+        ]
+
+        self.assertEqual(accented_actions, ["导入文件"])
+        self.assertEqual(
+            page._new_manuscript_button.objectName(),
+            "ghostButton",
+        )
+
+    def test_focused_secondary_action_contains_no_brand_yellow(self):
+        original_style = self._app.styleSheet()
+        theme_path = (
+            Path(__file__).parents[1]
+            / "app"
+            / "styles"
+            / "theme.qss"
+        )
+        self._app.setStyleSheet(theme_path.read_text(encoding="utf-8"))
+        try:
+            page = self._create_page()
+            page.resize(1280, 720)
+            page.show()
+            page._new_manuscript_button.setFocus()
+            self._app.processEvents()
+
+            gold = QColor("#DB9D16").rgb() & 0xFFFFFF
+
+            def count_gold_pixels(button):
+                image = button.grab().toImage()
+                return sum(
+                    1
+                    for y in range(image.height())
+                    for x in range(image.width())
+                    if image.pixel(x, y) & 0xFFFFFF == gold
+                )
+
+            self.assertEqual(
+                count_gold_pixels(page._new_manuscript_button),
+                0,
+            )
+            self.assertGreater(
+                count_gold_pixels(page._import_button),
+                1000,
+            )
+        finally:
+            self._app.setStyleSheet(original_style)
 
     def test_organize_mode_replaces_second_level_and_preserves_search(self):
         folder = database.create_folder("项目")

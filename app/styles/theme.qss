@@ -75,7 +75,11 @@ QPushButton#ghostButton:hover {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-QPushButton#ghostButton:focus,
+QPushButton#ghostButton:focus {
+    color: #f2f2f2;
+    border: 1px solid #f2f2f2;
+}
+
 QPushButton#breadcrumbBtn:focus {
     color: #f2f2f2;
     border: 1px solid #DB9D16;

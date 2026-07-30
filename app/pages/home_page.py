@@ -306,7 +306,7 @@ class HomePage(QWidget):
         header_layout.addStretch()
 
         self._new_manuscript_button = QPushButton("新建稿件")
-        self._new_manuscript_button.setObjectName("accentButton")
+        self._new_manuscript_button.setObjectName("ghostButton")
         self._new_manuscript_button.setCursor(
             Qt.CursorShape.PointingHandCursor
         )
@@ -316,7 +316,7 @@ class HomePage(QWidget):
         header_layout.addWidget(self._new_manuscript_button)
 
         self._import_button = QPushButton("导入文件")
-        self._import_button.setObjectName("ghostButton")
+        self._import_button.setObjectName("accentButton")
         self._import_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self._import_button.clicked.connect(self._import_file_dialog)
         header_layout.addWidget(self._import_button)

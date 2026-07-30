@@ -9,7 +9,6 @@
 import sqlite3
 import os
 import threading
-from collections.abc import Iterable
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional
@@ -269,25 +268,6 @@ def delete_manuscript(manuscript_id: int) -> bool:
         return cursor.rowcount > 0
 
 
-def _unique_ids(values: Iterable[int]) -> tuple[int, ...]:
-    return tuple(dict.fromkeys(int(value) for value in values))
-
-
-def delete_manuscripts(manuscript_ids: Iterable[int]) -> int:
-    ids = _unique_ids(manuscript_ids)
-    if not ids:
-        return 0
-
-    placeholders = ", ".join("?" for _ in ids)
-    with get_connection() as conn:
-        cursor = conn.execute(
-            f"DELETE FROM manuscripts WHERE id IN ({placeholders})",
-            ids,
-        )
-        conn.commit()
-        return cursor.rowcount
-
-
 def search_manuscripts(query: str, folder_id: int | None = None) -> list[Manuscript]:
     with get_connection() as conn:
         pattern = f"%{query}%"
@@ -362,32 +342,11 @@ def move_manuscript(manuscript_id: int, target_folder_id: int | None):
         conn.commit()
 
 
-def move_manuscripts(
-    manuscript_ids: Iterable[int],
-    target_folder_id: int | None,
-) -> int:
-    ids = _unique_ids(manuscript_ids)
-    if not ids:
-        return 0
-
-    placeholders = ", ".join("?" for _ in ids)
+def move_manuscripts_batch(manuscript_ids: list[int], target_folder_id: int | None):
     now = now_iso()
     with get_connection() as conn:
-        cursor = conn.execute(
-            f"""
-            UPDATE manuscripts
-            SET parent_folder_id = ?, updated_at = ?
-            WHERE id IN ({placeholders})
-              AND parent_folder_id IS NOT ?
-            """,
-            (target_folder_id, now, *ids, target_folder_id),
+        conn.executemany(
+            "UPDATE manuscripts SET parent_folder_id = ?, updated_at = ? WHERE id = ?",
+            [(target_folder_id, now, mid) for mid in manuscript_ids],
         )
         conn.commit()
-        return cursor.rowcount
-
-
-def move_manuscripts_batch(
-    manuscript_ids: list[int],
-    target_folder_id: int | None,
-) -> int:
-    return move_manuscripts(manuscript_ids, target_folder_id)

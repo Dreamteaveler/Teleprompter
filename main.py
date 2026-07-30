@@ -14,7 +14,6 @@ import sys
 import io
 import os
 import logging
-from datetime import datetime
 
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 if sys.stdout is not None:
@@ -26,57 +25,14 @@ if sys.stderr is not None:
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-gpu --disable-software-rasterizer"
 os.environ["QSG_RENDER_LOOP"] = "basic"
 
-DESKTOP = os.path.join(os.path.expanduser("~"), "Desktop")
-LOG_PATH = os.path.join(DESKTOP, "teleprompter_debug.log")
-LOG_FORMAT = '%(asctime)s.%(msecs)03d [%(name)s] %(levelname)s: %(message)s'
-LOG_DATE = '%H:%M:%S'
-
 logging.basicConfig(
-    level=logging.DEBUG,
-    format=LOG_FORMAT,
-    datefmt=LOG_DATE,
-    handlers=[
-        logging.FileHandler(LOG_PATH, encoding='utf-8', mode='w'),
-        logging.StreamHandler(sys.stderr),
-    ],
+    level=logging.WARNING,
+    format='%(asctime)s.%(msecs)03d [%(name)s] %(levelname)s: %(message)s',
+    datefmt='%H:%M:%S',
 )
 
 logging.getLogger("PIL").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-_window_log = logging.getLogger("teleprompter.windows")
-
-# 全局引用防止 GC 回收
-_window_monitor = None
-
-
-def _install_window_monitor(app: 'QApplication'):
-    """全局事件过滤器：记录所有顶层窗口的 show/hide/close 事件"""
-    global _window_monitor
-    from PyQt6.QtCore import QEvent, QObject
-
-    class WindowMonitor(QObject):
-        def eventFilter(self, obj, event):
-            t = event.type()
-            name = obj.__class__.__name__
-            if t in (QEvent.Type.Show, QEvent.Type.Hide, QEvent.Type.Close):
-                title = ''
-                try:
-                    title = obj.windowTitle() or ''
-                except Exception:
-                    pass
-                et = {QEvent.Type.Show: 'Show', QEvent.Type.Hide: 'Hide', QEvent.Type.Close: 'Close'}[t]
-                if obj.isWidgetType() and obj.isWindow():
-                    _window_log.info(f"顶层窗口 {et}: {name} title='{title}'")
-            elif t in (QEvent.Type.WindowActivate, QEvent.Type.WindowDeactivate):
-                et = 'Activate' if t == QEvent.Type.WindowActivate else 'Deactivate'
-                if obj.isWidgetType() and obj.isWindow():
-                    _window_log.info(f"窗口 {et}: {name}")
-            return False
-
-    _window_monitor = WindowMonitor()
-    app.installEventFilter(_window_monitor)
-    return _window_monitor
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
@@ -98,7 +54,6 @@ def main():
     init_database()
 
     app = QApplication(sys.argv)
-    _install_window_monitor(app)
     app.setApplicationName("提词器")
     app.setApplicationDisplayName("提词器")
 

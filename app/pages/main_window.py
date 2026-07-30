@@ -57,12 +57,15 @@ class MainWindow(QMainWindow):
 
     def _ensure_prompter(self):
         if not self._prompter_created:
+            self.setUpdatesEnabled(False)
             self._prompter = PrompterPage()
+            self._prompter.hide()
             self._stack.insertWidget(self.PAGE_PROMPTER, self._prompter)
             self._prompter.back_to_home.connect(self._on_back_to_home)
             self._prompter.completed.connect(self._on_prompter_completed)
             self._prompter.edit_current_manuscript.connect(self._on_edit_current)
             self._prompter_created = True
+            self.setUpdatesEnabled(True)
 
     def _on_navigate_to_prompter(self, manuscript_id: int):
         manuscript = get_manuscript(manuscript_id)
@@ -152,6 +155,7 @@ class MainWindow(QMainWindow):
         if msg.exec() != QMessageBox.StandardButton.Yes:
             event.ignore()
             return
+        self.hide()
         if self._prompter:
             try:
                 self._prompter._save_settings()

@@ -44,6 +44,32 @@ logging.basicConfig(
 logging.getLogger("PIL").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 
+_window_log = logging.getLogger("teleprompter.windows")
+
+
+def _install_window_monitor(app: 'QApplication'):
+    """全局事件过滤器：记录所有顶层窗口的 show/hide/close/activate 事件"""
+    from PyQt6.QtCore import QEvent, QObject
+
+    class WindowMonitor(QObject):
+        def eventFilter(self, obj, event):
+            t = event.type()
+            if t == QEvent.Type.Show:
+                _window_log.info(f"窗口 Show: {obj.__class__.__name__} title='{getattr(obj, 'windowTitle', lambda: '')()}'")
+            elif t == QEvent.Type.Hide:
+                _window_log.info(f"窗口 Hide: {obj.__class__.__name__}")
+            elif t == QEvent.Type.Close:
+                _window_log.info(f"窗口 Close: {obj.__class__.__name__}")
+            elif t == QEvent.Type.WindowActivate:
+                _window_log.info(f"窗口 Activate: {obj.__class__.__name__}")
+            elif t == QEvent.Type.WindowDeactivate:
+                _window_log.info(f"窗口 Deactivate: {obj.__class__.__name__}")
+            return False
+
+    monitor = WindowMonitor()
+    app.installEventFilter(monitor)
+    return monitor
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 
@@ -64,6 +90,7 @@ def main():
     init_database()
 
     app = QApplication(sys.argv)
+    _install_window_monitor(app)
     app.setApplicationName("提词器")
     app.setApplicationDisplayName("提词器")
 

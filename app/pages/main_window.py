@@ -172,8 +172,6 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
         logger.debug("用户确认退出, 开始清理...")
-        self.hide()
-        logger.debug("主窗口已隐藏")
         if self._prompter:
             try:
                 self._prompter._save_settings()
@@ -182,9 +180,12 @@ class MainWindow(QMainWindow):
                 logger.error(f"保存设置异常: {e}")
             if self._prompter._mirror_window:
                 logger.debug("关闭镜像窗口...")
+                self._prompter._mirror_window.hide()
                 self._prompter._mirror_window.close()
             if self._prompter._control_panel:
                 logger.debug("关闭控制面板...")
+                self._prompter._control_panel.hide()
                 self._prompter._control_panel.close()
-        logger.debug("closeEvent: 接受退出")
+        self.hide()
+        logger.debug("主窗口已隐藏, 接受退出")
         event.accept()

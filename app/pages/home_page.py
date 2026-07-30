@@ -488,7 +488,9 @@ class HomePage(QWidget):
     def _on_folder_selected(self, folder_id: int):
         self._exit_batch_mode(render=False)
         self._current_folder_id = folder_id
+        self._search_input.blockSignals(True)
         self._search_input.clear()
+        self._search_input.blockSignals(False)
         self._folder_path = get_folder_path(folder_id)
         self._update_breadcrumb()
         self._refresh()
@@ -496,7 +498,9 @@ class HomePage(QWidget):
     def _on_root_selected(self):
         self._exit_batch_mode(render=False)
         self._current_folder_id = None
+        self._search_input.blockSignals(True)
         self._search_input.clear()
+        self._search_input.blockSignals(False)
         self._folder_path = []
         self._update_breadcrumb()
         self._refresh()
@@ -504,7 +508,9 @@ class HomePage(QWidget):
     def _on_breadcrumb_click(self, folder_id: int | None):
         self._exit_batch_mode(render=False)
         self._current_folder_id = folder_id
+        self._search_input.blockSignals(True)
         self._search_input.clear()
+        self._search_input.blockSignals(False)
         if folder_id is not None:
             self._folder_path = get_folder_path(folder_id)
         else:
@@ -1006,9 +1012,7 @@ class HomePage(QWidget):
             self._refresh()
 
     def refresh(self):
-        self._search_input.clear()
         self._on_root_selected()
-        self._refresh()
 
     def keyPressEvent(self, event):
         if (

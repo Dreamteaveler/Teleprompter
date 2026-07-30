@@ -46,29 +46,37 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 _window_log = logging.getLogger("teleprompter.windows")
 
+# 全局引用防止 GC 回收
+_window_monitor = None
+
 
 def _install_window_monitor(app: 'QApplication'):
-    """全局事件过滤器：记录所有顶层窗口的 show/hide/close/activate 事件"""
+    """全局事件过滤器：记录所有顶层窗口的 show/hide/close 事件"""
+    global _window_monitor
     from PyQt6.QtCore import QEvent, QObject
 
     class WindowMonitor(QObject):
         def eventFilter(self, obj, event):
             t = event.type()
-            if t == QEvent.Type.Show:
-                _window_log.info(f"窗口 Show: {obj.__class__.__name__} title='{getattr(obj, 'windowTitle', lambda: '')()}'")
-            elif t == QEvent.Type.Hide:
-                _window_log.info(f"窗口 Hide: {obj.__class__.__name__}")
-            elif t == QEvent.Type.Close:
-                _window_log.info(f"窗口 Close: {obj.__class__.__name__}")
-            elif t == QEvent.Type.WindowActivate:
-                _window_log.info(f"窗口 Activate: {obj.__class__.__name__}")
-            elif t == QEvent.Type.WindowDeactivate:
-                _window_log.info(f"窗口 Deactivate: {obj.__class__.__name__}")
+            name = obj.__class__.__name__
+            if t in (QEvent.Type.Show, QEvent.Type.Hide, QEvent.Type.Close):
+                title = ''
+                try:
+                    title = obj.windowTitle() or ''
+                except Exception:
+                    pass
+                et = {QEvent.Type.Show: 'Show', QEvent.Type.Hide: 'Hide', QEvent.Type.Close: 'Close'}[t]
+                if obj.isWidgetType() and obj.isWindow():
+                    _window_log.info(f"顶层窗口 {et}: {name} title='{title}'")
+            elif t in (QEvent.Type.WindowActivate, QEvent.Type.WindowDeactivate):
+                et = 'Activate' if t == QEvent.Type.WindowActivate else 'Deactivate'
+                if obj.isWidgetType() and obj.isWindow():
+                    _window_log.info(f"窗口 {et}: {name}")
             return False
 
-    monitor = WindowMonitor()
-    app.installEventFilter(monitor)
-    return monitor
+    _window_monitor = WindowMonitor()
+    app.installEventFilter(_window_monitor)
+    return _window_monitor
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon

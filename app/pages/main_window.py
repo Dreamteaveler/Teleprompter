@@ -11,11 +11,14 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QKeyEvent
+import logging
 
 from app.database import get_manuscript
 from app.pages.home_page import HomePage
 from app.pages.prompter_page import PrompterPage
 from app.pages.editor_page import EditorPage
+
+logger = logging.getLogger("teleprompter.window")
 
 ASPECT_RATIO = 16.0 / 9.0
 
@@ -27,6 +30,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        logger.debug("MainWindow.__init__ 开始")
         self.setWindowTitle("提词器")
         self.setMinimumSize(960, 540)
         self.resize(1280, 720)
@@ -41,12 +45,14 @@ class MainWindow(QMainWindow):
 
         self._stack.addWidget(self._home)
         self._stack.addWidget(self._editor)
+        logger.debug("MainWindow 基础页面已添加 (home+editor)")
 
         self._resizing = False
         self._editing_from_prompter = False
         self._edit_scroll_ratio = 0.0
 
         self._connect_signals()
+        logger.debug("MainWindow.__init__ 完成")
 
     def _connect_signals(self):
         self._home.navigate_to_prompter.connect(self._on_navigate_to_prompter)
@@ -57,8 +63,10 @@ class MainWindow(QMainWindow):
 
     def _ensure_prompter(self):
         if not self._prompter_created:
+            logger.debug("_ensure_prompter: 开始创建 PrompterPage (WebEngine)...")
             self.setUpdatesEnabled(False)
             self._prompter = PrompterPage()
+            logger.debug("_ensure_prompter: PrompterPage 对象已创建, 连接信号...")
             self._prompter.hide()
             self._stack.insertWidget(self.PAGE_PROMPTER, self._prompter)
             self._prompter.back_to_home.connect(self._on_back_to_home)
@@ -66,20 +74,26 @@ class MainWindow(QMainWindow):
             self._prompter.edit_current_manuscript.connect(self._on_edit_current)
             self._prompter_created = True
             self.setUpdatesEnabled(True)
+            logger.debug("_ensure_prompter: PrompterPage 创建完成并已隐藏")
 
     def _on_navigate_to_prompter(self, manuscript_id: int):
+        logger.debug(f"导航到提词器: manuscript_id={manuscript_id}")
         manuscript = get_manuscript(manuscript_id)
         if not manuscript:
+            logger.warning(f"导航到提词器失败: 稿件不存在 id={manuscript_id}")
             return
         self._ensure_prompter()
         self._prompter.load_manuscript(manuscript)
         self._stack.setCurrentIndex(self.PAGE_PROMPTER)
+        logger.debug("已切换到提词器页面")
 
     def _on_navigate_to_editor(self, manuscript):
+        logger.debug(f"导航到编辑器: manuscript={'None(新建)' if manuscript is None else manuscript.id}")
         self._editor.load_manuscript(manuscript)
         self._stack.setCurrentIndex(self.PAGE_EDITOR)
 
     def _on_back_to_home(self):
+        logger.debug("返回主页")
         self._stack.setCurrentIndex(self.PAGE_HOME)
         self._home.refresh()
 
@@ -142,6 +156,7 @@ class MainWindow(QMainWindow):
         super().resizeEvent(event)
 
     def closeEvent(self, event):
+        logger.debug("closeEvent 触发")
         msg = QMessageBox(
             QMessageBox.Icon.Question,
             "退出确认", "确定要退出提词器吗？",
@@ -153,16 +168,23 @@ class MainWindow(QMainWindow):
         )
         msg.setDefaultButton(QMessageBox.StandardButton.No)
         if msg.exec() != QMessageBox.StandardButton.Yes:
+            logger.debug("用户取消退出")
             event.ignore()
             return
+        logger.debug("用户确认退出, 开始清理...")
         self.hide()
+        logger.debug("主窗口已隐藏")
         if self._prompter:
             try:
                 self._prompter._save_settings()
-            except Exception:
-                pass
+                logger.debug("提词器设置已保存")
+            except Exception as e:
+                logger.error(f"保存设置异常: {e}")
             if self._prompter._mirror_window:
+                logger.debug("关闭镜像窗口...")
                 self._prompter._mirror_window.close()
             if self._prompter._control_panel:
+                logger.debug("关闭控制面板...")
                 self._prompter._control_panel.close()
+        logger.debug("closeEvent: 接受退出")
         event.accept()

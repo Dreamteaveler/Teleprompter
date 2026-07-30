@@ -14,6 +14,7 @@ import sys
 import io
 import os
 import logging
+from datetime import datetime
 
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 if sys.stdout is not None:
@@ -21,10 +22,23 @@ if sys.stdout is not None:
 if sys.stderr is not None:
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='surrogateescape')
 
+DESKTOP = os.path.join(os.path.expanduser("~"), "Desktop")
+LOG_PATH = os.path.join(DESKTOP, "teleprompter_debug.log")
+LOG_FORMAT = '%(asctime)s.%(msecs)03d [%(name)s] %(levelname)s: %(message)s'
+LOG_DATE = '%H:%M:%S'
+
 logging.basicConfig(
-    level=logging.INFO,
-    format='[%(name)s] %(message)s',
+    level=logging.DEBUG,
+    format=LOG_FORMAT,
+    datefmt=LOG_DATE,
+    handlers=[
+        logging.FileHandler(LOG_PATH, encoding='utf-8', mode='w'),
+        logging.StreamHandler(sys.stderr),
+    ],
 )
+
+logging.getLogger("PIL").setLevel(logging.WARNING)
+logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon

@@ -19,6 +19,7 @@ from PyQt6.QtGui import (
 
 import os
 import re
+import logging
 
 from app.database import (
     list_manuscripts, search_manuscripts, delete_manuscript,
@@ -31,6 +32,8 @@ from app.file_importer import import_file
 from app.html_cleaner import clean_imported_html
 from app.image_utils import compress_images_in_html
 from app.widgets.batch_management import BatchActionBar, FolderPickerDialog
+
+logger = logging.getLogger("teleprompter.home")
 
 
 CARD_WIDTH = 240
@@ -732,6 +735,7 @@ class HomePage(QWidget):
         self._import_single_file(filepath)
 
     def _import_single_file(self, filepath: str, auto_confirm: bool = False):
+        logger.info(f"开始导入单文件: {os.path.basename(filepath)}, auto_confirm={auto_confirm}")
         try:
             title, html_content, needs_confirm = import_file(filepath, auto_confirm_formulas=auto_confirm)
             if not html_content:
@@ -781,6 +785,7 @@ class HomePage(QWidget):
         self._render_cards()
 
     def _render_cards(self):
+        logger.debug(f"_render_cards 开始, folder_id={self._current_folder_id}")
         if self._current_folder_id is not None:
             sub_folders = list_folders(parent_id=self._current_folder_id)
         else:
@@ -876,6 +881,7 @@ class HomePage(QWidget):
                 row_layout.addStretch()
             self._cards_layout.addStretch()
             self._update_batch_bar()
+            logger.debug(f"_render_cards 完成, total_items={total_items}")
         finally:
             self.setUpdatesEnabled(True)
 
@@ -1079,6 +1085,7 @@ class HomePage(QWidget):
 
     def _import_folder(self, folder_path: str):
         folder_name = os.path.basename(folder_path)
+        logger.info(f"开始导入文件夹: {folder_name}")
         new_folder = create_folder(folder_name, parent_id=self._current_folder_id, folder_type="import")
 
         imported = 0
@@ -1107,6 +1114,7 @@ class HomePage(QWidget):
             )
 
     def _import_files_batch(self, filepaths: list[str]):
+        logger.info(f"开始批量导入: {len(filepaths)} 个文件")
         imported = 0
         for fpath in filepaths:
             if not os.path.isfile(fpath):

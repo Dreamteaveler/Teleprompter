@@ -8,6 +8,7 @@
 #
 import re
 import html as html_module
+import logging
 import markdown
 
 from PyQt6.QtWidgets import (
@@ -16,6 +17,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtWebEngineWidgets import QWebEngineView
+
+logger = logging.getLogger("teleprompter.prompter")
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 
 from app.database import get_setting, set_setting
@@ -254,10 +257,13 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         return html
 
     def _on_page_loaded(self, ok: bool):
+        logger.debug(f"_on_page_loaded: ok={ok}")
         if not ok:
             self._page_ready = False
+            logger.warning("WebEngine 页面加载失败")
             return
         self._page_ready = True
+        logger.debug("WebEngine 页面加载成功, 开始刷新滚动高度")
         self._refresh_scroll_height()
         QTimer.singleShot(0, self._update_reading_line)
         if self._pending_scroll_ratio is not None:
@@ -311,6 +317,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._view.setHtml(html, mathjax_base_url())
 
     def load_manuscript(self, manuscript: Manuscript):
+        logger.debug(f"load_manuscript: id={manuscript.id}, title={manuscript.title}, content_len={len(manuscript.content)}")
         self._manuscript = manuscript
         self._load_content(manuscript.content)
         if self._is_mirror_open:

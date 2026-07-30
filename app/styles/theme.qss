@@ -347,6 +347,9 @@ QTreeWidget#folderTree {
     border-radius: 8px;
     padding: 6px;
     outline: none;
+    show-decoration-selected: 1;
+    selection-background-color: #3e3215;
+    selection-color: #DB9D16;
 }
 
 QTreeWidget#folderTree::item {
@@ -355,8 +358,12 @@ QTreeWidget#folderTree::item {
 }
 
 QTreeWidget#folderTree::item:selected {
-    background-color: rgba(219, 157, 22, 0.2);
+    background-color: #3e3215;
     color: #DB9D16;
+}
+
+QTreeWidget#folderTree::branch:selected {
+    background-color: #3e3215;
 }
 
 /* ─── Dialog ─────────────────────────────────── */

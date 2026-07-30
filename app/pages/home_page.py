@@ -13,7 +13,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint
 from PyQt6.QtGui import (
-    QFont, QAction, QDragEnterEvent, QDropEvent, QKeySequence, QShortcut,
+    QFont, QAction, QDragEnterEvent, QDropEvent,
 )
 
 import os
@@ -391,17 +391,6 @@ class HomePage(QWidget):
         self._drop_overlay.hide()
         self.setAcceptDrops(True)
 
-        self._batch_escape_shortcut = QShortcut(
-            QKeySequence("Esc"),
-            self,
-        )
-        self._batch_escape_shortcut.setContext(
-            Qt.ShortcutContext.WidgetWithChildrenShortcut
-        )
-        self._batch_escape_shortcut.activated.connect(
-            self._handle_batch_escape
-        )
-
     def _toggle_batch_mode(self, checked: bool = False):
         if self._batch_mode:
             self._exit_batch_mode()
@@ -427,10 +416,6 @@ class HomePage(QWidget):
         self._batch_manage_button.setText("批量管理")
         if render and was_active:
             self._render_cards()
-
-    def _handle_batch_escape(self):
-        if self._batch_mode:
-            self._exit_batch_mode()
 
     def _visible_manuscript_ids(self) -> set[int]:
         return {manuscript.id for manuscript in self._manuscripts}
@@ -919,6 +904,16 @@ class HomePage(QWidget):
         self._search_input.clear()
         self._on_root_selected()
         self._refresh()
+
+    def keyPressEvent(self, event):
+        if (
+            event.key() == Qt.Key.Key_Escape
+            and self._batch_mode
+        ):
+            self._exit_batch_mode()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

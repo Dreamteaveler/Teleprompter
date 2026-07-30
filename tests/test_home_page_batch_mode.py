@@ -154,6 +154,22 @@ class HomePageBatchModeTest(unittest.TestCase):
         self.assertFalse(page._batch_mode)
         self.assertEqual(page._selected_manuscript_ids, set())
 
+    def test_escape_exits_batch_mode_and_clears_selection(self):
+        manuscript = database.create_manuscript("测试稿件", "body")
+        page = self._create_page()
+        page.show()
+        page.activateWindow()
+        page._search_input.setFocus()
+        page._enter_batch_mode()
+        page._toggle_manuscript_selection(manuscript.id, True)
+        self._app.processEvents()
+
+        QTest.keyClick(page._search_input, Qt.Key.Key_Escape)
+        self._app.processEvents()
+
+        self.assertFalse(page._batch_mode)
+        self.assertEqual(page._selected_manuscript_ids, set())
+
     def test_folder_change_exits_batch_mode_and_clears_selection(self):
         manuscript = database.create_manuscript("测试稿件", "body")
         folder = database.create_folder("目标")

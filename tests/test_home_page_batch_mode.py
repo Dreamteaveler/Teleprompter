@@ -204,6 +204,30 @@ class HomePageBatchModeTest(unittest.TestCase):
         self.assertFalse(page._batch_mode)
         self.assertEqual(page._selected_manuscript_ids, set())
 
+    def test_batch_move_preserves_active_search_filter(self):
+        source = database.create_folder("来源")
+        target = database.create_folder("目标")
+        match = database.create_manuscript(
+            "匹配稿件",
+            "one",
+            folder_id=source.id,
+        )
+        database.create_manuscript(
+            "其他稿件",
+            "two",
+            folder_id=source.id,
+        )
+        page = self._create_page()
+        page._on_folder_selected(source.id)
+        page._search_input.setText("匹配")
+        page._enter_batch_mode()
+        page._toggle_manuscript_selection(match.id, True)
+
+        page._move_selected_to_folder(target.id)
+
+        self.assertEqual(page._search_input.text(), "匹配")
+        self.assertEqual(page._manuscripts, [])
+
     def test_home_page_deletes_selected_manuscripts_and_preserves_others(self):
         first = database.create_manuscript("删除", "one")
         survivor = database.create_manuscript("保留", "two")
@@ -218,6 +242,19 @@ class HomePageBatchModeTest(unittest.TestCase):
         self.assertIsNotNone(database.get_manuscript(survivor.id))
         self.assertFalse(page._batch_mode)
         self.assertEqual(page._selected_manuscript_ids, set())
+
+    def test_batch_delete_preserves_active_search_filter(self):
+        match = database.create_manuscript("匹配稿件", "one")
+        database.create_manuscript("其他稿件", "two")
+        page = self._create_page()
+        page._search_input.setText("匹配")
+        page._enter_batch_mode()
+        page._toggle_manuscript_selection(match.id, True)
+
+        page._delete_selected_now()
+
+        self.assertEqual(page._search_input.text(), "匹配")
+        self.assertEqual(page._manuscripts, [])
 
 
 if __name__ == "__main__":

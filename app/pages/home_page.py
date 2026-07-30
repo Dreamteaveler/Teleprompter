@@ -789,7 +789,7 @@ class HomePage(QWidget):
             return 0
         moved = move_manuscripts(manuscript_ids, target_folder_id)
         self._exit_batch_mode(render=False)
-        self._refresh()
+        self._on_search(self._search_input.text())
         return moved
 
     def _move_selected_manuscripts(self):
@@ -848,7 +848,7 @@ class HomePage(QWidget):
             return 0
         deleted = delete_manuscripts(manuscript_ids)
         self._exit_batch_mode(render=False)
-        self._refresh()
+        self._on_search(self._search_input.text())
         return deleted
 
     def _delete_selected_manuscripts(self):

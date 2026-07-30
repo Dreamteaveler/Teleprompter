@@ -9,11 +9,10 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QScrollArea, QFrame, QSizePolicy, QMessageBox,
-    QFileDialog, QSplitter, QTreeWidget, QTreeWidgetItem,
-    QMenu, QInputDialog, QHeaderView, QAbstractItemView,
+    QFileDialog, QMenu, QInputDialog,
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QTimer, QPoint
-from PyQt6.QtGui import QFont, QAction, QDragEnterEvent, QDropEvent, QIcon
+from PyQt6.QtGui import QFont, QAction, QDragEnterEvent, QDropEvent
 
 import os
 import re
@@ -21,18 +20,15 @@ import re
 from app.database import (
     list_manuscripts, search_manuscripts, delete_manuscript, create_manuscript,
     list_folders, get_folder, create_folder, rename_folder, delete_folder,
-    get_folder_path, get_all_folders, get_subfolder_count,
-    get_manuscript_count_in_folder, move_manuscript, move_manuscripts_batch,
+    get_folder_path, get_manuscript_count_in_folder, move_manuscript,
 )
 from app.models import Manuscript, Folder
-from app.docx_importer import import_docx_file
 from app.file_importer import import_file
 from app.image_utils import compress_images_in_html
 
 
 CARD_WIDTH = 240
 CARD_HEIGHT = 175
-SIDEBAR_WIDTH = 220
 
 
 class ManuscriptCard(QFrame):
@@ -125,182 +121,67 @@ class ManuscriptCard(QFrame):
             self.play_clicked.emit(self._manuscript.id)
 
 
-class FolderSidebar(QFrame):
-    folder_selected = pyqtSignal(object)
-    root_selected = pyqtSignal()
+class FolderCard(QFrame):
+    folder_clicked = pyqtSignal(int)
+    folder_context_menu = pyqtSignal(int, QPoint)
 
-    def __init__(self, parent=None):
+    def __init__(self, folder: Folder, parent=None):
         super().__init__(parent)
-        self.setObjectName("sidebar")
-        self.setFixedWidth(SIDEBAR_WIDTH)
-        self._init_ui()
+        self._folder = folder
+        self.setObjectName("card")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedSize(CARD_WIDTH, CARD_HEIGHT)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(
+            lambda pos: self.folder_context_menu.emit(self._folder.id, self.mapToGlobal(pos))
+        )
 
-    def _init_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(14, 12, 14, 12)
         layout.setSpacing(0)
 
-        sidebar_header = QLabel("  文稿目录")
-        sidebar_header.setObjectName("sidebarHeader")
-        sidebar_header.setFixedHeight(44)
-        sidebar_header.setStyleSheet(
-            "font-size: 13px; font-weight: 600; color: #9e9e9e; "
-            "padding: 12px 16px 4px 16px; border-bottom: 1px solid #2e2e2e;"
-        )
-        layout.addWidget(sidebar_header)
+        icon_row = QHBoxLayout()
+        icon = QLabel("📁")
+        icon.setFont(QFont("Segoe UI Emoji", 28))
+        icon_row.addWidget(icon)
+        icon_row.addStretch()
 
-        self._tree = QTreeWidget()
-        self._tree.setObjectName("folderTree")
-        self._tree.setHeaderHidden(True)
-        self._tree.setIndentation(16)
-        self._tree.setAnimated(True)
-        self._tree.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self._tree.setExpandsOnDoubleClick(True)
-        self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self._tree.customContextMenuRequested.connect(self._on_context_menu)
-        self._tree.itemClicked.connect(self._on_item_clicked)
-        layout.addWidget(self._tree, 1)
+        ms_count = get_manuscript_count_in_folder(folder.id)
+        count_label = QLabel(str(ms_count))
+        count_label.setStyleSheet("color: #9e9e9e; font-size: 11px; background: transparent;")
+        icon_row.addWidget(count_label)
+        layout.addLayout(icon_row)
 
-        btn_row = QWidget()
-        btn_row.setObjectName("sidebarFooter")
-        btn_row.setStyleSheet(
-            "QWidget#sidebarFooter { border-top: 1px solid #2e2e2e; }"
-        )
-        btn_layout = QHBoxLayout(btn_row)
-        btn_layout.setContentsMargins(8, 6, 8, 6)
+        name_label = QLabel(folder.name)
+        name_label.setStyleSheet("font-size: 14px; font-weight: 700; color: #f2f2f2;")
+        name_label.setWordWrap(True)
+        name_label.setMaximumHeight(44)
+        layout.addWidget(name_label)
 
-        new_folder_btn = QPushButton("+ 新建文件夹")
-        new_folder_btn.setObjectName("ghostButton")
-        new_folder_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        new_folder_btn.setStyleSheet(
-            "QPushButton { color: #9e9e9e; font-size: 12px; padding: 4px 8px; }"
-            "QPushButton:hover { color: #DB9D16; }"
-        )
-        new_folder_btn.clicked.connect(self._on_new_folder)
-        btn_layout.addWidget(new_folder_btn)
-        btn_layout.addStretch()
-        layout.addWidget(btn_row)
+        date_label = QLabel(folder.formatted_date())
+        date_label.setStyleSheet("color: #9e9e9e; font-size: 10px; background: transparent;")
+        layout.addWidget(date_label)
+        layout.addStretch()
 
-    def _on_item_clicked(self, item: QTreeWidgetItem, column: int):
-        data = item.data(0, Qt.ItemDataRole.UserRole)
-        if data == "root":
-            self.root_selected.emit()
-        elif isinstance(data, dict) and data.get("type") == "folder":
-            self.folder_selected.emit(data["id"])
+    def enterEvent(self, event):
+        super().enterEvent(event)
+        self.setStyleSheet("""QFrame#card {
+            border-color: rgba(219, 157, 22, 0.5);
+            background-color: #171717;
+            border-radius: 12px;
+        }""")
 
-    def _on_context_menu(self, pos: QPoint):
-        item = self._tree.itemAt(pos)
-        if not item:
-            return
-        data = item.data(0, Qt.ItemDataRole.UserRole)
-        if not isinstance(data, dict) or data.get("type") != "folder":
-            return
-        folder_id = data["id"]
-        menu = QMenu(self)
-        menu.setStyleSheet(
-            "QMenu { background-color: #1a1a1a; color: #f2f2f2; border: 1px solid #2e2e2e; border-radius: 6px; padding: 4px; }"
-            "QMenu::item { padding: 8px 32px 8px 16px; border-radius: 4px; }"
-            "QMenu::item:selected { background-color: #2a2a2a; color: #DB9D16; }"
-        )
+    def leaveEvent(self, event):
+        super().leaveEvent(event)
+        self.setStyleSheet("""QFrame#card {
+            background-color: #141414;
+            border: 1px solid #2e2e2e;
+            border-radius: 12px;
+        }""")
 
-        rename_action = menu.addAction("✏️ 重命名")
-        delete_action = menu.addAction("🗑️ 删除")
-        export_action = menu.addAction("📤 导出文件夹")
-
-        action = menu.exec(self._tree.mapToGlobal(pos))
-        if action == rename_action:
-            self._on_rename_folder(folder_id, item)
-        elif action == delete_action:
-            self._on_delete_folder(folder_id)
-        elif action == export_action:
-            self._on_export_folder(folder_id)
-
-    def _on_new_folder(self):
-        name, ok = QInputDialog.getText(self, "新建文件夹", "文件夹名称：")
-        if ok and name.strip():
-            create_folder(name.strip())
-            self.refresh()
-
-    def _on_rename_folder(self, folder_id: int, item: QTreeWidgetItem):
-        current = get_folder(folder_id)
-        if not current:
-            return
-        name, ok = QInputDialog.getText(
-            self, "重命名文件夹", "新名称：", text=current.name
-        )
-        if ok and name.strip():
-            rename_folder(folder_id, name.strip())
-            self.refresh()
-
-    def _on_delete_folder(self, folder_id: int):
-        folder = get_folder(folder_id)
-        if not folder:
-            return
-        reply = QMessageBox.question(
-            self, "确认删除",
-            f"确定要删除文件夹「{folder.name}」吗？\n文件夹内的稿件将移回根目录。",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-        if reply == QMessageBox.StandardButton.Yes:
-            delete_folder(folder_id)
-            self.refresh()
-
-    def _on_export_folder(self, folder_id: int):
-        folder = get_folder(folder_id)
-        if not folder:
-            return
-        QMessageBox.information(self, "导出文件夹", f"导出功能将在后续版本实现。\n文件夹「{folder.name}」共包含稿件待导出。")
-
-    def refresh(self):
-        self._tree.clear()
-
-        root_item = QTreeWidgetItem(self._tree)
-        root_item.setText(0, "📂 全部稿件")
-        root_item.setData(0, Qt.ItemDataRole.UserRole, "root")
-        root_font = root_item.font(0)
-        root_font.setBold(True)
-        root_item.setFont(0, root_font)
-
-        all_folders = get_all_folders()
-        folder_map: dict[int, list[Folder]] = {}
-        for f in all_folders:
-            parent = f.parent_folder_id if f.parent_folder_id is not None else 0
-            if parent not in folder_map:
-                folder_map[parent] = []
-            folder_map[parent].append(f)
-
-        def _add_children(parent_item: QTreeWidgetItem, parent_id: int):
-            children = folder_map.get(parent_id, [])
-            for f in children:
-                sub_count = get_subfolder_count(f.id)
-                ms_count = get_manuscript_count_in_folder(f.id)
-                label = f"📁 {f.name}"
-                if sub_count > 0 or ms_count > 0:
-                    label += f"  ({ms_count})"
-                child_item = QTreeWidgetItem(parent_item)
-                child_item.setText(0, label)
-                child_item.setData(0, Qt.ItemDataRole.UserRole, {"type": "folder", "id": f.id})
-                _add_children(child_item, f.id)
-
-        _add_children(root_item, 0)
-        root_item.setExpanded(True)
-
-    def select_folder(self, folder_id: int):
-        root = self._tree.topLevelItem(0)
-        if not root:
-            return
-        for i in range(root.childCount()):
-            child = root.child(i)
-            data = child.data(0, Qt.ItemDataRole.UserRole)
-            if isinstance(data, dict) and data.get("id") == folder_id:
-                self._tree.setCurrentItem(child)
-                return
-
-    def select_root(self):
-        root = self._tree.topLevelItem(0)
-        if root:
-            self._tree.setCurrentItem(root)
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.folder_clicked.emit(self._folder.id)
 
 
 class DropOverlay(QLabel):
@@ -321,46 +202,6 @@ class DropOverlay(QLabel):
         self.hide()
 
 
-class FolderEntryWidget(QFrame):
-    folder_clicked = pyqtSignal(int)
-
-    def __init__(self, folder: Folder, parent=None):
-        super().__init__(parent)
-        self._folder = folder
-        self.setObjectName("folderEntry")
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFixedSize(CARD_WIDTH, 80)
-        self.setStyleSheet(
-            "QFrame#folderEntry { background-color: #141414; border: 1px solid #2e2e2e; border-radius: 12px; }"
-            "QFrame#folderEntry:hover { border-color: rgba(219, 157, 22, 0.5); background-color: #171717; }"
-        )
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 12, 16, 12)
-        layout.setSpacing(4)
-
-        icon_row = QHBoxLayout()
-        icon = QLabel("📁")
-        icon.setFont(QFont("Segoe UI Emoji", 20))
-        icon_row.addWidget(icon)
-        icon_row.addStretch()
-
-        ms_count = get_manuscript_count_in_folder(folder.id)
-        count_label = QLabel(str(ms_count))
-        count_label.setStyleSheet("color: #9e9e9e; font-size: 11px;")
-        icon_row.addWidget(count_label)
-        layout.addLayout(icon_row)
-
-        name_label = QLabel(folder.name)
-        name_label.setStyleSheet("font-size: 13px; font-weight: 600; color: #f2f2f2;")
-        name_label.setWordWrap(True)
-        layout.addWidget(name_label)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.folder_clicked.emit(self._folder.id)
-
-
 class HomePage(QWidget):
     navigate_to_prompter = pyqtSignal(int)
     navigate_to_editor = pyqtSignal(object)
@@ -377,23 +218,9 @@ class HomePage(QWidget):
         self._refresh()
 
     def _init_ui(self):
-        outer = QHBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setHandleWidth(1)
-        splitter.setStyleSheet("QSplitter::handle { background-color: #2e2e2e; }")
-
-        self._sidebar = FolderSidebar()
-        self._sidebar.folder_selected.connect(self._on_folder_selected)
-        self._sidebar.root_selected.connect(self._on_root_selected)
-        splitter.addWidget(self._sidebar)
-
-        content = QWidget()
-        content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(0)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         header = QFrame()
         header.setObjectName("header")
@@ -415,6 +242,12 @@ class HomePage(QWidget):
         self._search_input.textChanged.connect(self._on_search)
         header_layout.addWidget(self._search_input)
 
+        new_folder_btn = QPushButton("📁 新建文件夹")
+        new_folder_btn.setObjectName("ghostButton")
+        new_folder_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        new_folder_btn.clicked.connect(self._on_new_folder)
+        header_layout.addWidget(new_folder_btn)
+
         import_btn = QPushButton("+ 新建稿件")
         import_btn.setObjectName("ghostButton")
         import_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -427,18 +260,18 @@ class HomePage(QWidget):
         new_btn.clicked.connect(self._import_file_dialog)
         header_layout.addWidget(new_btn)
 
-        content_layout.addWidget(header)
+        layout.addWidget(header)
 
         self._breadcrumb = QWidget()
         self._breadcrumb.setFixedHeight(36)
         self._breadcrumb.setStyleSheet(
-            "QWidget#breadcrumb { background-color: transparent; }"
+            "QWidget { background-color: transparent; }"
         )
         breadcrumb_layout = QHBoxLayout(self._breadcrumb)
         breadcrumb_layout.setContentsMargins(40, 4, 40, 4)
         breadcrumb_layout.setSpacing(4)
         breadcrumb_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        content_layout.addWidget(self._breadcrumb)
+        layout.addWidget(self._breadcrumb)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -449,13 +282,6 @@ class HomePage(QWidget):
         self._scroll_layout = QVBoxLayout(self._scroll_content)
         self._scroll_layout.setContentsMargins(40, 16, 40, 24)
         self._scroll_layout.setSpacing(16)
-
-        self._folder_entries_widget = QWidget()
-        self._folder_entries_layout = QHBoxLayout(self._folder_entries_widget)
-        self._folder_entries_layout.setSpacing(12)
-        self._folder_entries_layout.setContentsMargins(0, 0, 0, 0)
-        self._folder_entries_layout.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self._scroll_layout.addWidget(self._folder_entries_widget)
 
         self._count_label = QLabel("全部稿件")
         self._count_label.setObjectName("sectionTitle")
@@ -469,15 +295,17 @@ class HomePage(QWidget):
         self._scroll_layout.addStretch()
 
         scroll.setWidget(self._scroll_content)
-        content_layout.addWidget(scroll, 1)
-
-        splitter.addWidget(content)
-        splitter.setSizes([SIDEBAR_WIDTH, 800])
-        outer.addWidget(splitter)
+        layout.addWidget(scroll, 1)
 
         self._drop_overlay = DropOverlay(self)
         self._drop_overlay.hide()
         self.setAcceptDrops(True)
+
+    def _on_new_folder(self):
+        name, ok = QInputDialog.getText(self, "新建文件夹", "文件夹名称：")
+        if ok and name.strip():
+            create_folder(name.strip(), parent_id=self._current_folder_id)
+            self._refresh()
 
     def _on_folder_selected(self, folder_id: int):
         self._current_folder_id = folder_id
@@ -598,16 +426,44 @@ class HomePage(QWidget):
                 create_folder(name.strip(), parent_id=folder_id)
                 self._refresh()
         elif action == delete_action:
-            reply = QMessageBox.question(
-                self, "确认删除",
-                f"确定要删除文件夹「{folder.name}」吗？\n文件夹内的稿件将移回根目录。",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                delete_folder(folder_id)
-                self._on_root_selected()
+            self._confirm_delete_folder(folder_id)
+
+    def _on_folder_card_context_menu(self, folder_id: int, global_pos: QPoint):
+        folder = get_folder(folder_id)
+        if not folder:
+            return
+        menu = QMenu(self)
+        menu.setStyleSheet(
+            "QMenu { background-color: #1a1a1a; color: #f2f2f2; border: 1px solid #2e2e2e; border-radius: 6px; padding: 4px; }"
+            "QMenu::item { padding: 8px 32px 8px 16px; border-radius: 4px; }"
+            "QMenu::item:selected { background-color: #2a2a2a; color: #DB9D16; }"
+        )
+        rename_action = menu.addAction("✏️ 重命名")
+        delete_action = menu.addAction("🗑️ 删除")
+
+        action = menu.exec(global_pos)
+        if action == rename_action:
+            name, ok = QInputDialog.getText(self, "重命名文件夹", "新名称：", text=folder.name)
+            if ok and name.strip():
+                rename_folder(folder_id, name.strip())
                 self._refresh()
+        elif action == delete_action:
+            self._confirm_delete_folder(folder_id)
+
+    def _confirm_delete_folder(self, folder_id: int):
+        folder = get_folder(folder_id)
+        if not folder:
+            return
+        reply = QMessageBox.question(
+            self, "确认删除",
+            f"确定要删除文件夹「{folder.name}」吗？\n文件夹内的稿件将移回根目录。",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            delete_folder(folder_id)
+            self._on_root_selected()
+            self._refresh()
 
     def _import_file_dialog(self):
         filepath, _ = QFileDialog.getOpenFileName(
@@ -620,7 +476,6 @@ class HomePage(QWidget):
 
     def _import_single_file(self, filepath: str, auto_confirm: bool = False):
         try:
-            from app.file_importer import import_file
             title, html_content, needs_confirm = import_file(filepath, auto_confirm_formulas=auto_confirm)
             if not html_content:
                 QMessageBox.warning(self, "导入失败", "无法读取文档内容。")
@@ -663,30 +518,14 @@ class HomePage(QWidget):
 
     def _refresh(self):
         self._manuscripts = list_manuscripts(folder_id=self._current_folder_id)
-        self._sidebar.refresh()
-        if self._current_folder_id is not None:
-            self._sidebar.select_folder(self._current_folder_id)
-        else:
-            self._sidebar.select_root()
+        self._update_breadcrumb()
         self._render_cards()
 
     def _render_cards(self):
-        clear_layout = self._folder_entries_layout
-        while clear_layout.count():
-            item = clear_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
         if self._current_folder_id is not None:
             sub_folders = list_folders(parent_id=self._current_folder_id)
         else:
             sub_folders = list_folders(parent_id=None)
-
-        for sf in sub_folders:
-            entry = FolderEntryWidget(sf)
-            entry.folder_clicked.connect(self._on_folder_selected)
-            self._folder_entries_layout.addWidget(entry)
-        self._folder_entries_widget.setVisible(len(sub_folders) > 0)
 
         old_widget = self._cards_widget
         old_widget.hide()
@@ -697,17 +536,17 @@ class HomePage(QWidget):
         self._cards_layout = QVBoxLayout(self._cards_widget)
         self._cards_layout.setSpacing(12)
         self._cards_layout.setContentsMargins(0, 0, 0, 0)
-        self._scroll_layout.insertWidget(2, self._cards_widget)
+        self._scroll_layout.insertWidget(1, self._cards_widget)
 
-        count = len(self._manuscripts)
+        total_items = len(sub_folders) + len(self._manuscripts)
         if self._current_folder_id is not None:
             folder = get_folder(self._current_folder_id)
-            label = f"「{folder.name}」中的稿件（共 {count} 条）" if folder else f"稿件（共 {count} 条）"
+            label = f"「{folder.name}」（共 {total_items} 项）" if folder else f"（共 {total_items} 项）"
         else:
-            label = f"全部稿件（共 {count} 条）"
+            label = f"全部稿件（共 {total_items} 项）"
         self._count_label.setText(label)
 
-        if count == 0:
+        if total_items == 0:
             empty = QWidget()
             empty.setAcceptDrops(True)
             empty_layout = QVBoxLayout(empty)
@@ -719,7 +558,7 @@ class HomePage(QWidget):
             icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
             empty_layout.addWidget(icon)
 
-            msg = QLabel("暂无稿件\n拖放文件到此处导入，或点击右上角「新建稿件」开始创作")
+            msg = QLabel("暂无内容\n拖放文件到此处导入，或点击右上角按钮创建")
             msg.setAlignment(Qt.AlignmentFlag.AlignCenter)
             msg.setObjectName("mutedLabel")
             msg.setStyleSheet("font-size: 15px; line-height: 1.8;")
@@ -728,15 +567,23 @@ class HomePage(QWidget):
             self._cards_layout.addWidget(empty)
             return
 
+        items = []
+        for f in sub_folders:
+            items.append(("folder", f))
+        for ms in self._manuscripts:
+            items.append(("manuscript", ms))
+
+        items.sort(key=lambda x: x[1].updated_at if x[1].updated_at else "", reverse=True)
+
         row_layout = None
         card_spacing = 12
         win = self.window()
-        available_width = (win.width() if win else 1280) - 300
+        available_width = (win.width() if win else 1280) - 80
         if available_width <= 100:
             available_width = 1100
         row_width = 0
 
-        for ms in self._manuscripts:
+        for item_type, item in items:
             if row_layout is None or row_width + CARD_WIDTH > available_width:
                 if row_layout is not None:
                     row_layout.addStretch()
@@ -746,12 +593,18 @@ class HomePage(QWidget):
                 self._cards_layout.addLayout(row_layout)
                 row_width = 0
 
-            card = ManuscriptCard(ms)
-            card.play_clicked.connect(self.navigate_to_prompter.emit)
-            card.edit_clicked.connect(lambda mid: self.navigate_to_editor.emit(
-                next((m for m in self._manuscripts if m.id == mid), None)
-            ))
-            card.delete_clicked.connect(self._confirm_delete)
+            if item_type == "folder":
+                card = FolderCard(item)
+                card.folder_clicked.connect(self._on_folder_selected)
+                card.folder_context_menu.connect(self._on_folder_card_context_menu)
+            else:
+                card = ManuscriptCard(item)
+                card.play_clicked.connect(self.navigate_to_prompter.emit)
+                card.edit_clicked.connect(lambda mid: self.navigate_to_editor.emit(
+                    next((m for m in self._manuscripts if m.id == mid), None)
+                ))
+                card.delete_clicked.connect(self._confirm_delete)
+
             row_layout.addWidget(card)
             row_width += CARD_WIDTH + card_spacing
 

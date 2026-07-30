@@ -359,48 +359,6 @@ QFrame#header {
     border-bottom: 1px solid #2e2e2e;
 }
 
-/* ─── Sidebar ────────────────────────────────── */
-QFrame#sidebar {
-    background-color: #0f0f0f;
-    border-right: 1px solid #2e2e2e;
-}
-
-QTreeWidget#folderTree {
-    background-color: transparent;
-    color: #9e9e9e;
-    border: none;
-    font-size: 13px;
-    outline: none;
-}
-
-QTreeWidget#folderTree::item {
-    padding: 6px 4px;
-    border-radius: 6px;
-    margin: 1px 4px;
-}
-
-QTreeWidget#folderTree::item:selected {
-    background-color: rgba(219, 157, 22, 0.15);
-    color: #DB9D16;
-}
-
-QTreeWidget#folderTree::item:hover {
-    background-color: rgba(255, 255, 255, 0.03);
-    color: #f2f2f2;
-}
-
-QTreeWidget#folderTree::branch:has-children:!has-siblings:closed,
-QTreeWidget#folderTree::branch:closed:has-children:has-siblings {
-    border-image: none;
-    image: none;
-}
-
-QTreeWidget#folderTree::branch:open:has-children:!has-siblings,
-QTreeWidget#folderTree::branch:open:has-children:has-siblings {
-    border-image: none;
-    image: none;
-}
-
 /* ─── Breadcrumb ──────────────────────────────── */
 QPushButton#breadcrumbBtn {
     background: transparent;
@@ -417,18 +375,6 @@ QLabel#dropOverlay {
     font-weight: bold;
     border: 3px dashed #DB9D16;
     border-radius: 16px;
-}
-
-/* ─── Folder Entry ────────────────────────────── */
-QFrame#folderEntry {
-    background-color: #141414;
-    border: 1px solid #2e2e2e;
-    border-radius: 12px;
-}
-
-QFrame#folderEntry:hover {
-    border-color: rgba(219, 157, 22, 0.5);
-    background-color: #171717;
 }
 
 /* ─── Prompter Text ──────────────────────────── */

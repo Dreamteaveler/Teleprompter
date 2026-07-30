@@ -43,15 +43,15 @@ def _install_window_monitor(app: 'QApplication'):
             t = event.type()
             if t in (QEvent.Type.Show, QEvent.Type.Hide, QEvent.Type.Close):
                 name = obj.__class__.__name__
-                if obj.isWidgetType() and obj.isWindow():
-                    title = ''
-                    try:
-                        title = obj.windowTitle() or ''
-                    except Exception:
-                        pass
-                    et = {QEvent.Type.Show: 'Show', QEvent.Type.Hide: 'Hide', QEvent.Type.Close: 'Close'}[t]
-                    ts = datetime.now().strftime('%H:%M:%S.%f')[:12]
-                    _WINDOW_EVENTS.append(f"{ts} {et} {name} title='{title}'")
+                title = ''
+                try:
+                    title = obj.windowTitle() or ''
+                except Exception:
+                    pass
+                et = {QEvent.Type.Show: 'Show', QEvent.Type.Hide: 'Hide', QEvent.Type.Close: 'Close'}[t]
+                is_win = obj.isWidgetType() and obj.isWindow()
+                ts = datetime.now().strftime('%H:%M:%S.%f')[:12]
+                _WINDOW_EVENTS.append(f"{ts} {et} {name} isWin={is_win} title='{title}'")
             return False
 
     _monitor = WindowMonitor()

@@ -21,6 +21,8 @@ if sys.stdout is not None:
 if sys.stderr is not None:
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='surrogateescape')
 
+_WINDOW_EVENTS = []  # 内存收集窗口事件，退出时一次性写文件
+
 logging.basicConfig(
     level=logging.WARNING,
     format='%(asctime)s.%(msecs)03d [%(name)s] %(levelname)s: %(message)s',
@@ -29,6 +31,31 @@ logging.basicConfig(
 
 logging.getLogger("PIL").setLevel(logging.WARNING)
 logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+
+def _install_window_monitor(app: 'QApplication'):
+    from PyQt6.QtCore import QEvent, QObject
+    from datetime import datetime
+
+    class WindowMonitor(QObject):
+        def eventFilter(self, obj, event):
+            t = event.type()
+            if t in (QEvent.Type.Show, QEvent.Type.Hide, QEvent.Type.Close):
+                name = obj.__class__.__name__
+                if obj.isWidgetType() and obj.isWindow():
+                    title = ''
+                    try:
+                        title = obj.windowTitle() or ''
+                    except Exception:
+                        pass
+                    et = {QEvent.Type.Show: 'Show', QEvent.Type.Hide: 'Hide', QEvent.Type.Close: 'Close'}[t]
+                    ts = datetime.now().strftime('%H:%M:%S.%f')[:12]
+                    _WINDOW_EVENTS.append(f"{ts} {et} {name} title='{title}'")
+            return False
+
+    _monitor = WindowMonitor()
+    app.installEventFilter(_monitor)
+    return _monitor
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
@@ -50,6 +77,7 @@ def main():
     init_database()
 
     app = QApplication(sys.argv)
+    _install_window_monitor(app)
     app.setApplicationName("提词器")
     app.setApplicationDisplayName("提词器")
 

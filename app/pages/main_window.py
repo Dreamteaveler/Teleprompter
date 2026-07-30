@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtGui import QKeyEvent
 import logging
+import os
 
 from app.database import get_manuscript
 from app.pages.home_page import HomePage
@@ -194,4 +195,16 @@ class MainWindow(QMainWindow):
                 self._prompter._control_panel.close()
         self.hide()
         logger.debug("主窗口已隐藏, 接受退出")
+        _dump_window_events()
         event.accept()
+
+
+def _dump_window_events():
+    try:
+        import main as _m
+        if _m._WINDOW_EVENTS:
+            path = os.path.join(os.path.expanduser("~"), "Desktop", "teleprompter_windows.log")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("\n".join(_m._WINDOW_EVENTS))
+    except Exception:
+        pass

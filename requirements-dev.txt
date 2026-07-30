@@ -1,0 +1,2 @@
+-r requirements.txt
+fonttools[woff]>=4.62.1

@@ -5,26 +5,23 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 @font-face {
-    font-family: 'TPCJKBold';
+    font-family: 'TPLatin';
+    src: local('Times New Roman');
+    unicode-range: U+0000-024F, U+1E00-1EFF, U+2000-206F, U+20A0-20CF,
+                   U+2100-214F, U+2150-218F, U+0400-04FF, U+0500-052F;
+}
+@font-face {
+    font-family: 'TPCJK';
     src: url('__FONT_CJK__') format('woff2');
-    font-style: normal;
-    /* 字体文件本身是物理 700；映射到 normal 槽位，避免把西文一起加粗。 */
-    font-weight: 400;
-    unicode-range: U+1100-11FF, U+2E80-2EFF, U+2F00-2FDF, U+2FF0-2FFF,
-                   U+3000-303F, U+3040-309F, U+30A0-30FF, U+3100-312F,
-                   U+3130-318F, U+3190-319F, U+31A0-31BF, U+31C0-31EF,
-                   U+31F0-31FF, U+3200-32FF, U+3300-33FF, U+3400-4DBF,
-                   U+4E00-9FFF, U+A960-A97F, U+AC00-D7AF, U+D7B0-D7FF,
-                   U+F900-FAFF, U+FE10-FE1F, U+FE30-FE4F, U+FF00-FFEF,
-                   U+1B000-1B16F, U+1F200-1F2FF,
-                   U+20000-2FFFF, U+30000-3FFFF;
+    unicode-range: U+2E80-2EFF, U+3000-303F, U+31C0-31EF, U+3400-4DBF,
+                   U+4E00-9FFF, U+F900-FAFF, U+FE10-FE1F, U+FE30-FE4F,
+                   U+FF00-FFEF, U+20000-2FFFF, U+30000-3FFFF;
 }
 body {
     background:#0d0d0d;
     color:#f2f2f2;
     width:100%;
-    font-family: 'TPCJKBold', 'Times New Roman', serif;
-    font-weight:400;
+    font-family: 'TPLatin', 'TPCJK', 'Times New Roman', 'SimHei', '黑体', serif;
     font-size:__FS__px;
     line-height:__LH__;
     padding:__PT__px __PX__px __PB__px __PX__px;
@@ -40,7 +37,7 @@ body {
 .content sub{vertical-align:sub;font-size:0.92em;}
 .content em{font-style:italic;}
 .content blockquote{border-left:3px solid #DB9D16;margin:0.5em 0;padding:0.3em 1em;color:#bbb;}
-.content code{background:#1a1a1a;padding:2px 6px;border-radius:4px;font-family:inherit;}
+.content code{background:#1a1a1a;padding:2px 6px;border-radius:4px;font-family:monospace;}
 .content pre{background:#1a1a1a;padding:12px 16px;border-radius:6px;overflow-x:auto;}
 .content ul,.content ol{margin:0.4em 0;padding-left:1.5em;}
 .content li{margin:0.2em 0;}

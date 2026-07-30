@@ -82,9 +82,11 @@ class MainWindow(QMainWindow):
         if not manuscript:
             logger.warning(f"导航到提词器失败: 稿件不存在 id={manuscript_id}")
             return
+        self.setUpdatesEnabled(False)
         self._ensure_prompter()
         self._prompter.load_manuscript(manuscript)
         self._stack.setCurrentIndex(self.PAGE_PROMPTER)
+        self.setUpdatesEnabled(True)
         logger.debug("已切换到提词器页面")
 
     def _on_navigate_to_editor(self, manuscript):
@@ -94,8 +96,10 @@ class MainWindow(QMainWindow):
 
     def _on_back_to_home(self):
         logger.debug("返回主页")
+        self.setUpdatesEnabled(False)
         self._stack.setCurrentIndex(self.PAGE_HOME)
         self._home.refresh()
+        self.setUpdatesEnabled(True)
 
     def _on_edit_current(self, manuscript_id: int, scroll_ratio: float):
         manuscript = get_manuscript(manuscript_id)

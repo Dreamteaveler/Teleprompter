@@ -156,10 +156,12 @@ class EditorPage(QWidget):
 
             html_content = clean_imported_html(html_content)
             html_content = compress_images_in_html(html_content)
+            self._content_edit.setUpdatesEnabled(False)
             self._content_edit.setHtml(html_content)
             self._content_edit.setFontPointSize(self._editor_font_slider.value())
             self._apply_chinese_formatting()
             self._title_input.setText(title)
+            self._content_edit.setUpdatesEnabled(True)
         except Exception as e:
             QMessageBox.warning(self, "导入失败", f"无法导入文件：\n{e}")
 

@@ -24,6 +24,7 @@ from app.database import (
 )
 from app.models import Manuscript, Folder
 from app.file_importer import import_file
+from app.html_cleaner import clean_imported_html
 from app.image_utils import compress_images_in_html
 
 
@@ -503,6 +504,7 @@ class HomePage(QWidget):
                     return
                 title, html_content, _ = import_file(filepath, auto_confirm_formulas=True)
 
+            html_content = clean_imported_html(html_content)
             html_content = compress_images_in_html(html_content)
             manuscript = create_manuscript(title, html_content, folder_id=self._current_folder_id)
             self.navigate_to_editor.emit(manuscript)
@@ -711,6 +713,7 @@ class HomePage(QWidget):
                 try:
                     title, html_content, _ = import_file(fpath, auto_confirm_formulas=True)
                     if html_content:
+                        html_content = clean_imported_html(html_content)
                         html_content = compress_images_in_html(html_content)
                         create_manuscript(title, html_content, folder_id=new_folder.id)
                         imported += 1
@@ -734,6 +737,7 @@ class HomePage(QWidget):
             try:
                 title, html_content, _ = import_file(fpath, auto_confirm_formulas=True)
                 if html_content:
+                    html_content = clean_imported_html(html_content)
                     html_content = compress_images_in_html(html_content)
                     create_manuscript(title, html_content, folder_id=self._current_folder_id)
                     imported += 1

@@ -154,8 +154,8 @@ class EditorPage(QWidget):
                     return
                 title, html_content, _ = import_file(filepath, auto_confirm_formulas=True)
 
-            html_content = compress_images_in_html(html_content)
             html_content = clean_imported_html(html_content)
+            html_content = compress_images_in_html(html_content)
             self._content_edit.setHtml(html_content)
             self._content_edit.setFontPointSize(self._editor_font_slider.value())
             self._apply_chinese_formatting()

@@ -168,23 +168,13 @@ def rename_folder(folder_id: int, new_name: str) -> Folder | None:
 
 def delete_folder(folder_id: int) -> bool:
     with get_connection() as conn:
+        conn.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
         conn.execute(
-            """
-            WITH RECURSIVE folder_tree(id) AS (
-                SELECT id FROM folders WHERE id = ?
-                UNION
-                SELECT child.id
-                FROM folders AS child
-                JOIN folder_tree AS parent ON child.parent_folder_id = parent.id
-            )
-            DELETE FROM manuscripts
-            WHERE parent_folder_id IN (SELECT id FROM folder_tree)
-            """,
+            "UPDATE manuscripts SET parent_folder_id = NULL WHERE parent_folder_id = ?",
             (folder_id,),
         )
-        cursor = conn.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
         conn.commit()
-        return cursor.rowcount > 0
+        return True
 
 
 def get_folder_path(folder_id: int) -> list[Folder]:

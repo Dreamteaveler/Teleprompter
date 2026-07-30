@@ -457,8 +457,7 @@ class HomePage(QWidget):
             return
         reply = QMessageBox.question(
             self, "确认删除",
-            f"确定要删除文件夹「{folder.name}」吗？\n"
-            "文件夹内的所有稿件和子文件夹也将被永久删除，此操作不可撤销。",
+            f"确定要删除文件夹「{folder.name}」吗？\n文件夹内的稿件将移回根目录。",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )

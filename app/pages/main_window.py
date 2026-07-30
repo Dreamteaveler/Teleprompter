@@ -195,23 +195,4 @@ class MainWindow(QMainWindow):
                 self._prompter._control_panel.close()
         self.hide()
         logger.debug("主窗口已隐藏, 接受退出")
-        _dump_window_events()
         event.accept()
-
-
-def _dump_window_events():
-    import sys
-    try:
-        m = sys.modules.get('main')
-        if m is None:
-            import main as _m
-            m = _m
-        events = getattr(m, '_WINDOW_EVENTS', [])
-        if not events:
-            return
-        path = os.path.join(os.path.expanduser("~"), "Desktop", "teleprompter_windows.log")
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(events) + "\n")
-        logger.warning(f"窗口事件已写入: {path} ({len(events)} 条)")
-    except Exception as e:
-        logger.warning(f"写入窗口事件失败: {e}")

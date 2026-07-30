@@ -14,6 +14,7 @@ import sys
 import io
 import os
 import logging
+from datetime import datetime
 
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 if sys.stdout is not None:
@@ -57,6 +58,18 @@ def _install_window_monitor(app: 'QApplication'):
     app.installEventFilter(_monitor)
     return _monitor
 
+
+def _dump_events():
+    if not _WINDOW_EVENTS:
+        return
+    path = os.path.join(os.path.expanduser("~"), "Desktop", "teleprompter_windows.log")
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("\n".join(_WINDOW_EVENTS) + "\n")
+        print(f"[window_monitor] 窗口事件已写入: {path} ({len(_WINDOW_EVENTS)} 条)", file=sys.stderr)
+    except Exception as e:
+        print(f"[window_monitor] 写入失败: {e}", file=sys.stderr)
+
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
 
@@ -78,6 +91,7 @@ def main():
 
     app = QApplication(sys.argv)
     _install_window_monitor(app)
+    app.aboutToQuit.connect(_dump_events)
     app.setApplicationName("提词器")
     app.setApplicationDisplayName("提词器")
 

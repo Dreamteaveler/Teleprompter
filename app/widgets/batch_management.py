@@ -87,10 +87,30 @@ class BatchActionBar(QFrame):
         self.select_all_toggled.emit(state == Qt.CheckState.Checked.value)
 
     def set_context(self, path_text: str, filter_text: str = ""):
-        self.context_label.setText(path_text)
+        context_text = self.context_label.fontMetrics().elidedText(
+            path_text,
+            Qt.TextElideMode.ElideMiddle,
+            172,
+        )
+        self.context_label.setText(context_text)
+        self.context_label.setToolTip(
+            path_text if context_text != path_text else ""
+        )
+
         filter_text = filter_text.strip()
-        self.filter_label.setText(
+        full_filter_text = (
             f"筛选：“{filter_text}”" if filter_text else ""
+        )
+        visible_filter_text = self.filter_label.fontMetrics().elidedText(
+            full_filter_text,
+            Qt.TextElideMode.ElideMiddle,
+            116,
+        )
+        self.filter_label.setText(visible_filter_text)
+        self.filter_label.setToolTip(
+            full_filter_text
+            if visible_filter_text != full_filter_text
+            else ""
         )
         self.filter_label.setVisible(bool(filter_text))
 

@@ -338,6 +338,10 @@ class HomePage(QWidget):
         self._breadcrumb.setStyleSheet(
             "QWidget { background-color: transparent; }"
         )
+        self._breadcrumb.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Preferred,
+        )
         breadcrumb_layout = QHBoxLayout(self._breadcrumb)
         breadcrumb_layout.setContentsMargins(0, 0, 0, 0)
         breadcrumb_layout.setSpacing(4)
@@ -384,6 +388,7 @@ class HomePage(QWidget):
         self._toolbar_stack.setCurrentWidget(self._normal_toolbar)
 
         layout.addWidget(self._document_toolbar)
+        self._update_toolbar_responsiveness(self.width())
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -396,7 +401,7 @@ class HomePage(QWidget):
         self._scroll_layout.setSpacing(16)
 
         self._count_label = QLabel("共 0 项")
-        self._count_label.setObjectName("sectionTitle")
+        self._count_label.setObjectName("itemCountLabel")
         self._scroll_layout.addWidget(self._count_label)
 
         self._cards_widget = QWidget()
@@ -517,6 +522,17 @@ class HomePage(QWidget):
             self._search_input.text(),
         )
 
+    def _update_toolbar_responsiveness(self, width: int):
+        compact = width < 1100
+        margin = 24 if compact else 40
+        self._normal_toolbar.layout().setContentsMargins(
+            margin,
+            8,
+            margin,
+            8,
+        )
+        self._batch_bar.set_compact(compact)
+
     def _update_breadcrumb(self):
         clear_layout = self._breadcrumb.layout()
         if clear_layout is None:
@@ -532,28 +548,58 @@ class HomePage(QWidget):
 
         root_btn = QPushButton("全部稿件")
         root_btn.setObjectName("breadcrumbBtn")
+        root_btn.setMaximumWidth(100)
         root_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         root_btn.setStyleSheet(
             "QPushButton { color: %s; background: transparent; border: none; font-size: 12px; padding: 2px 6px; }"
-            "QPushButton:hover { color: #DB9D16; }" % (
+            "QPushButton:hover { color: #DB9D16; }"
+            "QPushButton:focus { border: 1px solid #DB9D16; border-radius: 4px; }" % (
                 "#DB9D16" if self._current_folder_id is None else "#9e9e9e"
             )
         )
         root_btn.clicked.connect(lambda: self._on_breadcrumb_click(None))
         clear_layout.addWidget(root_btn)
 
-        for i, f in enumerate(self._folder_path):
+        visible_path = self._folder_path
+        if len(self._folder_path) > 2:
             arrow = QLabel("▸")
             arrow.setStyleSheet(arrow_style)
             clear_layout.addWidget(arrow)
 
-            is_last = (i == len(self._folder_path) - 1)
+            hidden_folders = tuple(self._folder_path[:-1])
+            overflow_btn = QPushButton("…")
+            overflow_btn.setObjectName("breadcrumbBtn")
+            overflow_btn.setToolTip("显示上级目录")
+            overflow_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            overflow_btn.clicked.connect(
+                lambda checked=False, folders=hidden_folders, button=overflow_btn:
+                self._show_breadcrumb_overflow(folders, button)
+            )
+            clear_layout.addWidget(overflow_btn)
+            visible_path = self._folder_path[-1:]
+
+        for i, f in enumerate(visible_path):
+            arrow = QLabel("▸")
+            arrow.setStyleSheet(arrow_style)
+            clear_layout.addWidget(arrow)
+
+            is_last = i == len(visible_path) - 1
             btn = QPushButton(f.name)
             btn.setObjectName("breadcrumbBtn")
+            btn.setMaximumWidth(150)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            elided_name = btn.fontMetrics().elidedText(
+                f.name,
+                Qt.TextElideMode.ElideMiddle,
+                132,
+            )
+            btn.setText(elided_name)
+            if elided_name != f.name:
+                btn.setToolTip(f.name)
             btn.setStyleSheet(
                 "QPushButton { color: %s; background: transparent; border: none; font-size: 12px; padding: 2px 6px; }"
-                "QPushButton:hover { color: #DB9D16; }" % (
+                "QPushButton:hover { color: #DB9D16; }"
+                "QPushButton:focus { border: 1px solid #DB9D16; border-radius: 4px; }" % (
                     "#DB9D16" if is_last else "#9e9e9e"
                 )
             )
@@ -568,6 +614,7 @@ class HomePage(QWidget):
                 folder_menu_btn.setStyleSheet(
                     "QPushButton { color: #9e9e9e; background: transparent; border: none; font-size: 9px; padding: 2px 4px; }"
                     "QPushButton:hover { color: #DB9D16; }"
+                    "QPushButton:focus { border: 1px solid #DB9D16; border-radius: 4px; }"
                 )
                 fid = f.id
                 folder_menu_btn.clicked.connect(
@@ -576,6 +623,29 @@ class HomePage(QWidget):
                 clear_layout.addWidget(folder_menu_btn)
 
         clear_layout.addStretch()
+
+    def _show_breadcrumb_overflow(
+        self,
+        folders: tuple[Folder, ...],
+        anchor_widget: QPushButton,
+    ):
+        menu = QMenu(self)
+        menu.setStyleSheet(
+            "QMenu { background-color: #1a1a1a; color: #f2f2f2; border: 1px solid #2e2e2e; border-radius: 6px; padding: 4px; }"
+            "QMenu::item { padding: 8px 32px 8px 16px; border-radius: 4px; }"
+            "QMenu::item:selected { background-color: #2a2a2a; color: #DB9D16; }"
+        )
+        for folder in folders:
+            action = menu.addAction(folder.name)
+            action.setData(folder.id)
+
+        selected = menu.exec(
+            anchor_widget.mapToGlobal(
+                QPoint(0, anchor_widget.height())
+            )
+        )
+        if selected is not None:
+            self._on_breadcrumb_click(selected.data())
 
     @staticmethod
     def _clear_layout(layout):
@@ -946,6 +1016,8 @@ class HomePage(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        if hasattr(self, "_normal_toolbar"):
+            self._update_toolbar_responsiveness(event.size().width())
         if hasattr(self, '_drop_overlay'):
             self._drop_overlay.setGeometry(self.rect())
         if hasattr(self, '_relayout_timer'):

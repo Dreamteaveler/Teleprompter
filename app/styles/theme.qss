@@ -75,6 +75,16 @@ QPushButton#ghostButton:hover {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
+QPushButton#ghostButton:focus,
+QPushButton#breadcrumbBtn:focus {
+    color: #f2f2f2;
+    border: 1px solid #DB9D16;
+}
+
+QPushButton#accentButton:focus {
+    border: 2px solid #f2f2f2;
+}
+
 QPushButton#iconButton {
     background-color: #141414;
     border: 1px solid #2e2e2e;
@@ -188,6 +198,11 @@ QLabel#sectionTitle {
 
 QLabel#accentLabel {
     color: #DB9D16;
+}
+
+QLabel#itemCountLabel {
+    color: #9e9e9e;
+    font-size: 13px;
 }
 
 /* ─── List / Cards ───────────────────────────── */

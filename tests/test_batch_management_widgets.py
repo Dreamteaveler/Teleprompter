@@ -102,6 +102,24 @@ class BatchManagementWidgetsTest(unittest.TestCase):
 
         self.assertEqual(bar.layout().contentsMargins().left(), 40)
 
+    def test_action_bar_elides_long_context_with_full_tooltips(self):
+        bar = BatchActionBar()
+        path_text = (
+            "全部稿件 › 第一层很长的文件夹 › "
+            "第二层很长的文件夹 › 当前目录"
+        )
+        filter_text = "这是一个特别长的搜索关键词"
+
+        bar.set_context(path_text, filter_text)
+
+        self.assertIn("…", bar.context_label.text())
+        self.assertEqual(bar.context_label.toolTip(), path_text)
+        self.assertIn("…", bar.filter_label.text())
+        self.assertEqual(
+            bar.filter_label.toolTip(),
+            f"筛选：“{filter_text}”",
+        )
+
     def test_folder_picker_builds_nested_tree_and_supports_root(self):
         parent = database.create_folder("父文件夹")
         child = database.create_folder("子文件夹", parent_id=parent.id)

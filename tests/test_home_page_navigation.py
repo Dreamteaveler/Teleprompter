@@ -5,6 +5,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import QApplication, QPushButton
 
 from app import database
@@ -147,6 +148,64 @@ class HomePageNavigationTest(unittest.TestCase):
                 for text in texts
             )
         )
+
+    def test_toolbar_uses_compact_margins_at_minimum_window_width(self):
+        page = self._create_page()
+        page.resize(960, 540)
+        self._app.processEvents()
+
+        normal_margins = (
+            page._normal_toolbar.layout().contentsMargins()
+        )
+        batch_margins = page._batch_bar.layout().contentsMargins()
+
+        self.assertEqual(normal_margins.left(), 24)
+        self.assertEqual(normal_margins.right(), 24)
+        self.assertEqual(batch_margins.left(), 24)
+        self.assertEqual(batch_margins.right(), 24)
+        self.assertGreaterEqual(page._search_input.minimumWidth(), 180)
+
+    def test_long_deep_path_preserves_navigation_without_clipping_actions(self):
+        first = database.create_folder("第一层很长的项目文件夹名称")
+        second = database.create_folder(
+            "第二层同样很长的资料文件夹名称",
+            parent_id=first.id,
+        )
+        third = database.create_folder(
+            "第三层需要折叠的历史文件夹名称",
+            parent_id=second.id,
+        )
+        current_name = "当前目录名称特别长需要显示省略号"
+        current = database.create_folder(
+            current_name,
+            parent_id=third.id,
+        )
+        page = self._create_page()
+        page.resize(960, 540)
+        page._on_folder_selected(current.id)
+        page.show()
+        self._app.processEvents()
+
+        buttons = page._breadcrumb.findChildren(QPushButton)
+        texts = [button.text() for button in buttons]
+
+        self.assertIn("全部稿件", texts)
+        self.assertIn("…", texts)
+        current_button = next(
+            button
+            for button in buttons
+            if button.toolTip() == current_name
+        )
+        self.assertIn("…", current_button.text())
+
+        for control in (
+            page._search_input,
+            page._new_folder_button,
+            page._organize_button,
+        ):
+            left = control.mapTo(page, QPoint(0, 0)).x()
+            self.assertGreaterEqual(left, 0)
+            self.assertLessEqual(left + control.width(), page.width())
 
 
 if __name__ == "__main__":

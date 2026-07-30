@@ -25,6 +25,7 @@ from app.database import create_manuscript, update_manuscript
 from app.models import Manuscript
 from app.docx_importer import import_docx_file, _omml_to_latex
 from app.file_importer import import_file
+from app.html_cleaner import clean_imported_html
 from app.image_utils import compress_images_in_html
 
 
@@ -154,6 +155,7 @@ class EditorPage(QWidget):
                 title, html_content, _ = import_file(filepath, auto_confirm_formulas=True)
 
             html_content = compress_images_in_html(html_content)
+            html_content = clean_imported_html(html_content)
             self._content_edit.setHtml(html_content)
             self._content_edit.setFontPointSize(self._editor_font_slider.value())
             self._apply_chinese_formatting()
@@ -213,6 +215,7 @@ class EditorPage(QWidget):
         body = re.sub(r'<head[^>]*>.*?</head>', '', body, flags=re.DOTALL)
         body = body.strip()
         body = self._clean_html_noise(body)
+        body = clean_imported_html(body)
         body = self._convert_formula_images(body)
         body = compress_images_in_html(body)
         return body

@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 from app.docx_importer import import_docx_file
+from app.html_cleaner import clean_imported_html
 
 SUPPORTED_EXTENSIONS = (".docx", ".txt", ".md", ".markdown")
 
@@ -32,6 +33,7 @@ def _import_docx(filepath: str, auto_confirm_formulas: bool) -> tuple[str, str, 
     if needs_confirm and auto_confirm_formulas and has_formulas:
         html_content, _ = import_docx_file(filepath, formula_mode="latex")
 
+    html_content = clean_imported_html(html_content)
     title = _file_title(filepath, ".docx")
     return title, html_content, needs_confirm
 
@@ -51,6 +53,7 @@ def _import_text(filepath: str) -> tuple[str, str, bool]:
     else:
         html_body = _plain_to_html(raw)
 
+    html_body = clean_imported_html(html_body)
     title = _file_title(filepath, ext)
     return title, html_body, False
 

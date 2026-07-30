@@ -13,7 +13,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.models import Manuscript
+from app.models import Manuscript, Folder
 
 
 def _get_app_dir() -> str:
@@ -62,14 +62,28 @@ def init_database():
     os.makedirs(DOCS_DIR, exist_ok=True)
     with get_connection() as conn:
         conn.execute("""
+            CREATE TABLE IF NOT EXISTS folders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL DEFAULT '',
+                parent_folder_id INTEGER DEFAULT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                folder_type TEXT NOT NULL DEFAULT 'custom',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (parent_folder_id) REFERENCES folders(id) ON DELETE CASCADE
+            )
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS manuscripts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL DEFAULT '',
                 content TEXT NOT NULL DEFAULT '',
                 cover_image TEXT NOT NULL DEFAULT '',
                 status TEXT NOT NULL DEFAULT 'draft',
+                parent_folder_id INTEGER DEFAULT NULL,
                 created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (parent_folder_id) REFERENCES folders(id) ON DELETE SET NULL
             )
         """)
         conn.execute("""
@@ -78,6 +92,7 @@ def init_database():
                 value TEXT NOT NULL
             )
         """)
+        _migrate_add_folder_support(conn)
         conn.commit()
 
 
@@ -85,14 +100,124 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _migrate_add_folder_support(conn: sqlite3.Connection):
+    existing = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='folders'").fetchone()
+    if not existing:
+        conn.execute("""
+            CREATE TABLE folders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL DEFAULT '',
+                parent_folder_id INTEGER DEFAULT NULL,
+                sort_order INTEGER NOT NULL DEFAULT 0,
+                folder_type TEXT NOT NULL DEFAULT 'custom',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (parent_folder_id) REFERENCES folders(id) ON DELETE CASCADE
+            )
+        """)
+    try:
+        conn.execute("ALTER TABLE manuscripts ADD COLUMN parent_folder_id INTEGER DEFAULT NULL REFERENCES folders(id) ON DELETE SET NULL")
+    except sqlite3.OperationalError:
+        pass
+
+
+# ─── Folder CRUD ──────────────────────────────────────────────────
+
+
+def list_folders(parent_id: int | None = None) -> list[Folder]:
+    with get_connection() as conn:
+        if parent_id is None:
+            rows = conn.execute(
+                "SELECT * FROM folders WHERE parent_folder_id IS NULL ORDER BY sort_order, name"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM folders WHERE parent_folder_id = ? ORDER BY sort_order, name",
+                (parent_id,),
+            ).fetchall()
+        return [_row_to_folder(r) for r in rows]
+
+
+def get_folder(folder_id: int) -> Folder | None:
+    with get_connection() as conn:
+        row = conn.execute("SELECT * FROM folders WHERE id = ?", (folder_id,)).fetchone()
+        return _row_to_folder(row) if row else None
+
+
+def create_folder(name: str, parent_id: int | None = None, folder_type: str = "custom") -> Folder:
+    now = now_iso()
+    with get_connection() as conn:
+        cursor = conn.execute(
+            "INSERT INTO folders (name, parent_folder_id, folder_type, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (name, parent_id, folder_type, now, now),
+        )
+        conn.commit()
+        return get_folder(cursor.lastrowid)
+
+
+def rename_folder(folder_id: int, new_name: str) -> Folder | None:
+    now = now_iso()
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE folders SET name = ?, updated_at = ? WHERE id = ?",
+            (new_name, now, folder_id),
+        )
+        conn.commit()
+        return get_folder(folder_id)
+
+
+def delete_folder(folder_id: int) -> bool:
+    with get_connection() as conn:
+        conn.execute("DELETE FROM folders WHERE id = ?", (folder_id,))
+        conn.execute(
+            "UPDATE manuscripts SET parent_folder_id = NULL WHERE parent_folder_id = ?",
+            (folder_id,),
+        )
+        conn.commit()
+        return True
+
+
+def get_folder_path(folder_id: int) -> list[Folder]:
+    result: list[Folder] = []
+    current = get_folder(folder_id)
+    while current is not None:
+        result.insert(0, current)
+        current = get_folder(current.parent_folder_id) if current.parent_folder_id else None
+    return result
+
+
+def get_all_folders() -> list[Folder]:
+    with get_connection() as conn:
+        rows = conn.execute("SELECT * FROM folders ORDER BY parent_folder_id, sort_order, name").fetchall()
+        return [_row_to_folder(r) for r in rows]
+
+
+def get_subfolder_count(folder_id: int) -> int:
+    with get_connection() as conn:
+        row = conn.execute("SELECT COUNT(*) as cnt FROM folders WHERE parent_folder_id = ?", (folder_id,)).fetchone()
+        return row["cnt"]
+
+
+def get_manuscript_count_in_folder(folder_id: int) -> int:
+    with get_connection() as conn:
+        row = conn.execute("SELECT COUNT(*) as cnt FROM manuscripts WHERE parent_folder_id = ?", (folder_id,)).fetchone()
+        return row["cnt"]
+
+
 # ─── Manuscript CRUD ───────────────────────────────────────────────
 
 
-def list_manuscripts() -> list[Manuscript]:
+def list_manuscripts(folder_id: int | None = None) -> list[Manuscript]:
     with get_connection() as conn:
-        rows = conn.execute(
-            "SELECT * FROM manuscripts ORDER BY updated_at DESC"
-        ).fetchall()
+        if folder_id is None:
+            rows = conn.execute(
+                "SELECT * FROM manuscripts ORDER BY updated_at DESC"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM manuscripts WHERE parent_folder_id = ? ORDER BY updated_at DESC",
+                (folder_id,),
+            ).fetchall()
         return [_row_to_manuscript(r) for r in rows]
 
 
@@ -104,12 +229,12 @@ def get_manuscript(manuscript_id: int) -> Optional[Manuscript]:
         return _row_to_manuscript(row) if row else None
 
 
-def create_manuscript(title: str, content: str) -> Manuscript:
+def create_manuscript(title: str, content: str, folder_id: int | None = None) -> Manuscript:
     now = now_iso()
     with get_connection() as conn:
         cursor = conn.execute(
-            "INSERT INTO manuscripts (title, content, created_at, updated_at) VALUES (?, ?, ?, ?)",
-            (title, content, now, now),
+            "INSERT INTO manuscripts (title, content, parent_folder_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (title, content, folder_id, now, now),
         )
         conn.commit()
         return get_manuscript(cursor.lastrowid)
@@ -133,13 +258,19 @@ def delete_manuscript(manuscript_id: int) -> bool:
         return cursor.rowcount > 0
 
 
-def search_manuscripts(query: str) -> list[Manuscript]:
+def search_manuscripts(query: str, folder_id: int | None = None) -> list[Manuscript]:
     with get_connection() as conn:
         pattern = f"%{query}%"
-        rows = conn.execute(
-            "SELECT * FROM manuscripts WHERE title LIKE ? OR content LIKE ? ORDER BY updated_at DESC",
-            (pattern, pattern),
-        ).fetchall()
+        if folder_id is None:
+            rows = conn.execute(
+                "SELECT * FROM manuscripts WHERE title LIKE ? OR content LIKE ? ORDER BY updated_at DESC",
+                (pattern, pattern),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM manuscripts WHERE (title LIKE ? OR content LIKE ?) AND parent_folder_id = ? ORDER BY updated_at DESC",
+                (pattern, pattern, folder_id),
+            ).fetchall()
         return [_row_to_manuscript(r) for r in rows]
 
 
@@ -173,6 +304,39 @@ def _row_to_manuscript(row: sqlite3.Row) -> Manuscript:
         content=row["content"],
         cover_image=row["cover_image"],
         status=row["status"],
+        parent_folder_id=row["parent_folder_id"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
+
+
+def _row_to_folder(row: sqlite3.Row) -> Folder:
+    return Folder(
+        id=row["id"],
+        name=row["name"],
+        parent_folder_id=row["parent_folder_id"],
+        sort_order=row["sort_order"] if row["sort_order"] is not None else 0,
+        folder_type=row["folder_type"] if row["folder_type"] is not None else "custom",
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+def move_manuscript(manuscript_id: int, target_folder_id: int | None):
+    now = now_iso()
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE manuscripts SET parent_folder_id = ?, updated_at = ? WHERE id = ?",
+            (target_folder_id, now, manuscript_id),
+        )
+        conn.commit()
+
+
+def move_manuscripts_batch(manuscript_ids: list[int], target_folder_id: int | None):
+    now = now_iso()
+    with get_connection() as conn:
+        conn.executemany(
+            "UPDATE manuscripts SET parent_folder_id = ?, updated_at = ? WHERE id = ?",
+            [(target_folder_id, now, mid) for mid in manuscript_ids],
+        )
+        conn.commit()

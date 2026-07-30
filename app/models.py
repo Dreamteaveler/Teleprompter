@@ -11,12 +11,33 @@ from datetime import datetime, timezone
 
 
 @dataclass
+class Folder:
+    id: int = 0
+    name: str = ""
+    parent_folder_id: int | None = None
+    sort_order: int = 0
+    folder_type: str = "custom"
+    created_at: str = ""
+    updated_at: str = ""
+
+    def formatted_date(self) -> str:
+        try:
+            dt = datetime.fromisoformat(self.updated_at)
+            if dt.tzinfo is not None:
+                dt = dt.astimezone()
+            return dt.strftime("%Y-%m-%d %H:%M")
+        except (ValueError, TypeError):
+            return ""
+
+
+@dataclass
 class Manuscript:
     id: int = 0
     title: str = ""
     content: str = ""
     cover_image: str = ""
     status: str = "draft"
+    parent_folder_id: int | None = None
     created_at: str = ""
     updated_at: str = ""
 

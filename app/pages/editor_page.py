@@ -24,6 +24,7 @@ from lxml import etree
 from app.database import create_manuscript, update_manuscript
 from app.models import Manuscript
 from app.docx_importer import import_docx_file, _omml_to_latex
+from app.file_importer import import_file
 from app.image_utils import compress_images_in_html
 
 
@@ -75,10 +76,10 @@ class EditorPage(QWidget):
         self._title_input.setObjectName("titleInput")
         header.addWidget(self._title_input, 1)
 
-        import_btn = QPushButton("📄 导入 Word")
+        import_btn = QPushButton("📄 导入文件")
         import_btn.setObjectName("ghostButton")
         import_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        import_btn.clicked.connect(self._import_word)
+        import_btn.clicked.connect(self._import_file)
         header.addWidget(import_btn)
 
         save_btn = QPushButton("💾 保存")
@@ -117,38 +118,48 @@ class EditorPage(QWidget):
         self._content_edit.post_paste_handler = self._apply_chinese_formatting
         layout.addWidget(self._content_edit, 1)
 
-    def _import_word(self):
+    def _import_file(self):
         filepath, _ = QFileDialog.getOpenFileName(
-            self, "导入 Word 文档", "", "Word 文档 (*.docx)"
+            self, "导入文件", "",
+            "支持的文件 (*.docx *.txt *.md);;Word 文档 (*.docx);;文本文件 (*.txt);;Markdown (*.md)"
         )
         if not filepath:
             return
         try:
-            html_content, has_formulas = import_docx_file(filepath)
+            title, html_content, needs_confirm = import_file(filepath)
             if not html_content:
                 QMessageBox.warning(self, "导入失败", "无法读取文档内容。")
                 return
 
-            has_images = bool(re.search(r'<img[^>]*>', html_content, re.IGNORECASE))
-            if has_formulas or has_images:
+            if needs_confirm:
+                has_formulas = bool(re.search(r'<img[^>]*class="formula"', html_content, re.IGNORECASE) or
+                                    re.search(r'\$', html_content))
+                has_images = bool(re.search(r'<img[^>]*>', html_content, re.IGNORECASE))
+
+                msg = "检测到"
+                parts = []
+                if has_formulas:
+                    parts.append("公式")
+                if has_images:
+                    parts.append("图片")
+                msg += "和".join(parts) + "，是否转换格式以保证正确渲染？"
+
                 reply = QMessageBox.question(
-                    self, "转换提示",
-                    "检测到图片或公式，是否转换格式以保证正确渲染？",
+                    self, "转换提示", msg,
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.Yes,
                 )
                 if reply != QMessageBox.StandardButton.Yes:
                     return
-                if has_formulas:
-                    html_content, _ = import_docx_file(filepath, formula_mode="latex")
+                title, html_content, _ = import_file(filepath, auto_confirm_formulas=True)
 
+            html_content = compress_images_in_html(html_content)
             self._content_edit.setHtml(html_content)
             self._content_edit.setFontPointSize(self._editor_font_slider.value())
             self._apply_chinese_formatting()
-            title = filepath.split("/")[-1].split("\\")[-1].replace(".docx", "")
             self._title_input.setText(title)
         except Exception as e:
-            QMessageBox.warning(self, "导入失败", f"无法导入 Word 文档：\n{e}")
+            QMessageBox.warning(self, "导入失败", f"无法导入文件：\n{e}")
 
     def load_manuscript(self, manuscript: Manuscript | None):
         self._editing_id = manuscript.id if manuscript else None

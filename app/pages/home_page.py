@@ -368,7 +368,6 @@ class HomePage(QWidget):
         )
         self._organize_button.clicked.connect(self._toggle_batch_mode)
         normal_layout.addWidget(self._organize_button)
-        self._batch_manage_button = self._organize_button
 
         self._toolbar_stack.addWidget(self._normal_toolbar)
 
@@ -425,8 +424,8 @@ class HomePage(QWidget):
             return
         self._batch_mode = True
         self._selected_manuscript_ids.clear()
-        self._batch_bar.show()
-        self._batch_manage_button.setText("退出批量管理")
+        self._sync_organize_toolbar_context()
+        self._toolbar_stack.setCurrentWidget(self._batch_bar)
         self._render_cards()
 
     def _exit_batch_mode(self, render: bool = True):
@@ -435,8 +434,7 @@ class HomePage(QWidget):
         )
         self._batch_mode = False
         self._selected_manuscript_ids.clear()
-        self._batch_bar.hide()
-        self._batch_manage_button.setText("批量管理")
+        self._toolbar_stack.setCurrentWidget(self._normal_toolbar)
         if render and was_active:
             self._render_cards()
 
@@ -506,6 +504,19 @@ class HomePage(QWidget):
         self._update_breadcrumb()
         self._refresh()
 
+    def _current_path_text(self) -> str:
+        names = [
+            "全部稿件",
+            *(folder.name for folder in self._folder_path),
+        ]
+        return " › ".join(names)
+
+    def _sync_organize_toolbar_context(self):
+        self._batch_bar.set_context(
+            self._current_path_text(),
+            self._search_input.text(),
+        )
+
     def _update_breadcrumb(self):
         clear_layout = self._breadcrumb.layout()
         if clear_layout is None:
@@ -519,7 +530,7 @@ class HomePage(QWidget):
 
         arrow_style = "color: #555; font-size: 12px; padding: 0 4px; background: transparent; border: none;"
 
-        root_btn = QPushButton("📂 全部稿件")
+        root_btn = QPushButton("全部稿件")
         root_btn.setObjectName("breadcrumbBtn")
         root_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         root_btn.setStyleSheet(
@@ -537,7 +548,7 @@ class HomePage(QWidget):
             clear_layout.addWidget(arrow)
 
             is_last = (i == len(self._folder_path) - 1)
-            btn = QPushButton(f"📁 {f.name}")
+            btn = QPushButton(f.name)
             btn.setObjectName("breadcrumbBtn")
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             btn.setStyleSheet(

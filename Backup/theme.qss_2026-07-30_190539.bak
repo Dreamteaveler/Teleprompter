@@ -197,23 +197,6 @@ QFrame#card {
     border-radius: 12px;
 }
 
-QFrame#batchActionBar {
-    background-color: #141414;
-    border-top: 1px solid #2e2e2e;
-    border-bottom: 1px solid #2e2e2e;
-}
-
-QPushButton#dangerButton {
-    color: #ef4444;
-    border-color: rgba(239, 68, 68, 0.45);
-}
-
-QPushButton#dangerButton:hover {
-    color: #ffffff;
-    background-color: #b91c1c;
-    border-color: #ef4444;
-}
-
 /* ─── Toolbar Buttons ────────────────────────── */
 QToolButton#toolbarBtn {
     background-color: #141414;
@@ -338,25 +321,6 @@ QComboBox QAbstractItemView {
     selection-background-color: #1f1f1f;
     selection-color: #DB9D16;
     outline: none;
-}
-
-QTreeWidget#folderTree {
-    background-color: #141414;
-    color: #f2f2f2;
-    border: 1px solid #2e2e2e;
-    border-radius: 8px;
-    padding: 6px;
-    outline: none;
-}
-
-QTreeWidget#folderTree::item {
-    min-height: 30px;
-    padding: 2px 6px;
-}
-
-QTreeWidget#folderTree::item:selected {
-    background-color: rgba(219, 157, 22, 0.2);
-    color: #DB9D16;
 }
 
 /* ─── Dialog ─────────────────────────────────── */

@@ -8,6 +8,7 @@
 #
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtCore import Qt, QUrl, QSize, QTimer, QEvent, pyqtSignal
+from PyQt6.QtGui import QColor
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 
@@ -52,7 +53,7 @@ class MirrorWindow(QMainWindow):
         self._mirror_scale: float = 1.0
 
         self._view = QWebEngineView()
-        self._view.setStyleSheet("background-color: #0d0d0d; border: none;")
+        self._view.page().setBackgroundColor(QColor("#0d0d0d"))
         self._view.setZoomFactor(1.0)
         settings = self._view.settings()
         settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)

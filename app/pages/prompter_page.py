@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import (
     QWidget, QGridLayout, QSizePolicy, QMenu,
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineSettings
 
@@ -140,7 +141,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._view.loadFinished.connect(self._on_page_loaded)
         self._view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._view.customContextMenuRequested.connect(self._on_context_menu)
-        self._view.setStyleSheet("background-color: #0d0d0d;")
+        self._view.page().setBackgroundColor(QColor("#0d0d0d"))
 
         layout.addWidget(self._view, 0, 0, 1, 1)
         self._is_fullscreen = False

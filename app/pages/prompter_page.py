@@ -19,7 +19,7 @@ from PyQt6.QtWebEngineCore import QWebEngineSettings
 
 from app.database import get_setting, set_setting
 from app.models import Manuscript
-from app.paths import mathjax_url, mathjax_base_url, load_template
+from app.paths import mathjax_url, mathjax_base_url, load_template, font_cjk_url
 from app.pages.mirror_window import MirrorWindow
 from app.pages.control_panel import ControlPanel
 from app.pages.playback_mixin import PlaybackMixin
@@ -200,6 +200,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
 
         html = _get_html_template()
         html = html.replace("__MATHJAX__", mathjax_url())
+        html = html.replace("__FONT_CJK__", font_cjk_url())
         html = html.replace("__FS__", str(fs))
         html = html.replace("__LH__", str(lh))
         html = html.replace("__PT__", str(pt))

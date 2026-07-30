@@ -16,6 +16,8 @@ datas = [
     (str(ROOT / "app" / "templates" / "prompter.html"), "app/templates"),
     # MathJax 完整库（公式渲染必需）
     (str(ROOT / "app" / "mathjax"), "app/mathjax"),
+    # 内嵌字体（思源黑体 Bold CJK）
+    (str(ROOT / "app" / "fonts" / "NotoSansSC-Bold-CJK.woff2"), "app/fonts"),
     # 应用图标
     (str(ROOT / "text.ico"), "."),
 ]

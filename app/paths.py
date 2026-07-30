@@ -48,3 +48,9 @@ def load_template(name: str) -> str:
     path = template_path(name)
     with open(path, encoding="utf-8") as f:
         return f.read()
+
+
+def font_cjk_url() -> str:
+    """返回内嵌思源黑体 Bold CJK 字体的 file:// URI。"""
+    font_path = os.path.join(get_app_root(), "app", "fonts", "NotoSansSC-Bold-CJK.woff2")
+    return Path(font_path).as_uri()

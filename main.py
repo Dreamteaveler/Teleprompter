@@ -13,12 +13,18 @@ __version__ = "1.12"
 import sys
 import io
 import os
+import logging
 
 os.environ['PYTHONIOENCODING'] = 'utf-8'
 if sys.stdout is not None:
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='surrogateescape')
 if sys.stderr is not None:
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='surrogateescape')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(name)s] %(message)s',
+)
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon

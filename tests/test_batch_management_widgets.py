@@ -49,7 +49,7 @@ class BatchManagementWidgetsTest(unittest.TestCase):
 
         self.assertFalse(bar.move_button.isEnabled())
         self.assertFalse(bar.delete_button.isEnabled())
-        self.assertEqual(bar.count_label.text(), "已选择 0 篇")
+        self.assertEqual(bar.count_label.text(), "已选 0 项")
         self.assertEqual(
             bar.select_all_checkbox.checkState(),
             Qt.CheckState.Unchecked,
@@ -59,7 +59,7 @@ class BatchManagementWidgetsTest(unittest.TestCase):
 
         self.assertTrue(bar.move_button.isEnabled())
         self.assertTrue(bar.delete_button.isEnabled())
-        self.assertEqual(bar.count_label.text(), "已选择 3 篇")
+        self.assertEqual(bar.count_label.text(), "已选 3 项")
         self.assertEqual(
             bar.select_all_checkbox.checkState(),
             Qt.CheckState.Checked,
@@ -75,6 +75,32 @@ class BatchManagementWidgetsTest(unittest.TestCase):
         bar.select_all_checkbox.click()
 
         self.assertEqual(choices, [True, False])
+
+    def test_action_bar_uses_organize_copy_and_context(self):
+        bar = BatchActionBar()
+
+        bar.set_context("全部稿件 › 项目", "演讲")
+        bar.set_selection_state(selected_count=2, visible_count=3)
+
+        self.assertEqual(bar.context_label.text(), "全部稿件 › 项目")
+        self.assertEqual(bar.filter_label.text(), "筛选：“演讲”")
+        self.assertTrue(bar.filter_label.isVisibleTo(bar))
+        self.assertEqual(bar.count_label.text(), "已选 2 项")
+        self.assertEqual(bar.move_button.text(), "移入文件夹")
+        self.assertEqual(bar.exit_button.text(), "完成")
+
+    def test_action_bar_hides_empty_filter_and_uses_compact_margins(self):
+        bar = BatchActionBar()
+
+        bar.set_context("全部稿件")
+        bar.set_compact(True)
+
+        self.assertFalse(bar.filter_label.isVisibleTo(bar))
+        self.assertEqual(bar.layout().contentsMargins().left(), 24)
+
+        bar.set_compact(False)
+
+        self.assertEqual(bar.layout().contentsMargins().left(), 40)
 
     def test_folder_picker_builds_nested_tree_and_supports_root(self):
         parent = database.create_folder("父文件夹")

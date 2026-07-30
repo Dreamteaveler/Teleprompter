@@ -38,18 +38,29 @@ class BatchActionBar(QFrame):
         layout.setContentsMargins(40, 8, 40, 8)
         layout.setSpacing(10)
 
+        self.context_label = QLabel("全部稿件")
+        self.context_label.setObjectName("toolbarContext")
+        self.context_label.setMaximumWidth(180)
+        layout.addWidget(self.context_label)
+
+        self.filter_label = QLabel()
+        self.filter_label.setObjectName("filterHint")
+        self.filter_label.setMaximumWidth(140)
+        self.filter_label.hide()
+        layout.addWidget(self.filter_label)
+
         self.select_all_checkbox = QCheckBox("全选当前列表")
         self.select_all_checkbox.stateChanged.connect(
             self._on_select_all_state_changed
         )
         layout.addWidget(self.select_all_checkbox)
 
-        self.count_label = QLabel("已选择 0 篇")
+        self.count_label = QLabel("已选 0 项")
         self.count_label.setObjectName("accentLabel")
         layout.addWidget(self.count_label)
         layout.addStretch()
 
-        self.move_button = QPushButton("移动到文件夹")
+        self.move_button = QPushButton("移入文件夹")
         self.move_button.setObjectName("ghostButton")
         self.move_button.clicked.connect(
             lambda checked=False: self.move_requested.emit()
@@ -63,7 +74,7 @@ class BatchActionBar(QFrame):
         )
         layout.addWidget(self.delete_button)
 
-        self.exit_button = QPushButton("退出批量管理")
+        self.exit_button = QPushButton("完成")
         self.exit_button.setObjectName("ghostButton")
         self.exit_button.clicked.connect(
             lambda checked=False: self.exit_requested.emit()
@@ -75,8 +86,20 @@ class BatchActionBar(QFrame):
     def _on_select_all_state_changed(self, state: int):
         self.select_all_toggled.emit(state == Qt.CheckState.Checked.value)
 
+    def set_context(self, path_text: str, filter_text: str = ""):
+        self.context_label.setText(path_text)
+        filter_text = filter_text.strip()
+        self.filter_label.setText(
+            f"筛选：“{filter_text}”" if filter_text else ""
+        )
+        self.filter_label.setVisible(bool(filter_text))
+
+    def set_compact(self, compact: bool):
+        margin = 24 if compact else 40
+        self.layout().setContentsMargins(margin, 8, margin, 8)
+
     def set_selection_state(self, selected_count: int, visible_count: int):
-        self.count_label.setText(f"已选择 {selected_count} 篇")
+        self.count_label.setText(f"已选 {selected_count} 项")
         has_selection = selected_count > 0
         self.move_button.setEnabled(has_selection)
         self.delete_button.setEnabled(has_selection)

@@ -1015,6 +1015,7 @@ class HomePage(QWidget):
             return
 
         dialog = FolderPickerDialog(self)
+        dialog.set_disabled_folder_ids(self._selected_folder_ids)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
 

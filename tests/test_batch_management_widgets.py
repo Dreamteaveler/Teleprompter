@@ -150,6 +150,18 @@ class BatchManagementWidgetsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "文件夹名称不能为空"):
             dialog.create_folder_under_selection("   ")
 
+    def test_folder_picker_disables_selected_folder_and_descendants(self):
+        parent = database.create_folder("父")
+        child = database.create_folder("子", parent_id=parent.id)
+        dialog = FolderPickerDialog()
+
+        dialog.set_disabled_folder_ids({parent.id})
+
+        self.assertFalse(dialog.select_folder(parent.id))
+        self.assertFalse(dialog.select_folder(child.id))
+        self.assertTrue(dialog.select_folder(None))
+        self.assertIsNone(dialog.selected_folder_id())
+
 
 if __name__ == "__main__":
     unittest.main()

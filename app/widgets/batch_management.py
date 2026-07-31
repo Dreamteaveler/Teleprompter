@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
-from app.database import create_folder, get_all_folders
+from app.database import create_folder, get_all_folders, get_folder_subtree_ids
 from app.models import Folder
 
 
@@ -183,6 +183,14 @@ class FolderPickerDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
         layout.addWidget(self.button_box)
 
+        self._disabled_folder_ids: set[int] = set()
+        self.reload_tree()
+
+    def set_disabled_folder_ids(self, disabled: set[int]):
+        """禁用指定文件夹及其全部子孙，防止作为移动目标。"""
+        self._disabled_folder_ids = (
+            get_folder_subtree_ids(disabled) if disabled else set()
+        )
         self.reload_tree()
 
     def reload_tree(self, select_folder_id: int | None = None):
@@ -196,6 +204,8 @@ class FolderPickerDialog(QDialog):
         for folder in folders:
             item = QTreeWidgetItem([f"📁 {folder.name}"])
             item.setData(0, Qt.ItemDataRole.UserRole, folder.id)
+            if folder.id in self._disabled_folder_ids:
+                item.setDisabled(True)
             items[folder.id] = item
 
         for folder in folders:
@@ -220,7 +230,10 @@ class FolderPickerDialog(QDialog):
     def select_folder(self, folder_id: int | None) -> bool:
         target = ROOT_FOLDER if folder_id is None else folder_id
         for item in self._iter_tree_items():
-            if item.data(0, Qt.ItemDataRole.UserRole) == target:
+            if (
+                item.data(0, Qt.ItemDataRole.UserRole) == target
+                and not item.isDisabled()
+            ):
                 self.tree.setCurrentItem(item)
                 self.tree.scrollToItem(item)
                 return True

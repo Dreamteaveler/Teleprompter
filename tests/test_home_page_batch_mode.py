@@ -56,6 +56,40 @@ class HomePageBatchModeTest(unittest.TestCase):
     def _create_page(self):
         return self._track(HomePage())
 
+    def _find_cards(self, page):
+        return page._cards_widget.findChildren(ManuscriptCard)
+
+    def test_render_cards_in_batch_mode_shows_checkbox(self):
+        database.create_manuscript("稿件", "body")
+        page = self._create_page()
+        page.show()
+        self._app.processEvents()
+
+        page._enter_batch_mode()
+        self._app.processEvents()
+
+        cards = self._find_cards(page)
+        self.assertTrue(cards)
+        for card in cards:
+            self.assertTrue(
+                card.selection_checkbox.isVisible(),
+                f"批量模式下复选框应可见: {card._manuscript.title}",
+            )
+
+    def test_render_cards_in_normal_mode_hides_checkbox(self):
+        database.create_manuscript("稿件", "body")
+        page = self._create_page()
+        page.show()
+        self._app.processEvents()
+
+        cards = self._find_cards(page)
+        self.assertTrue(cards)
+        for card in cards:
+            self.assertFalse(
+                card.selection_checkbox.isVisible(),
+                f"普通模式下复选框应隐藏: {card._manuscript.title}",
+            )
+
     def test_card_checkbox_toggles_selection_without_playing(self):
         manuscript = database.create_manuscript("稿件", "body")
         card = self._track(

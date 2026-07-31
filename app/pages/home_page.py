@@ -407,7 +407,7 @@ class HomePage(QWidget):
         self._count_label.setObjectName("itemCountLabel")
         self._scroll_layout.addWidget(self._count_label)
 
-        self._cards_widget = QWidget()
+        self._cards_widget = QWidget(self._scroll_content)
         self._cards_layout = QVBoxLayout(self._cards_widget)
         self._cards_layout.setSpacing(12)
         self._cards_layout.setContentsMargins(0, 0, 0, 0)
@@ -770,7 +770,6 @@ class HomePage(QWidget):
                     return
                 title, html_content, _ = import_file(filepath, auto_confirm_formulas=True)
 
-            html_content = clean_imported_html(html_content)
             html_content = compress_images_in_html(html_content)
             manuscript = create_manuscript(title, html_content, folder_id=self._current_folder_id)
             self.navigate_to_editor.emit(manuscript)
@@ -811,7 +810,7 @@ class HomePage(QWidget):
             self._scroll_layout.removeWidget(old_widget)
             old_widget.deleteLater()
 
-            self._cards_widget = QWidget()
+            self._cards_widget = QWidget(self._scroll_content)
             self._cards_layout = QVBoxLayout(self._cards_widget)
             self._cards_layout.setSpacing(12)
             self._cards_layout.setContentsMargins(0, 0, 0, 0)
@@ -821,7 +820,7 @@ class HomePage(QWidget):
             self._count_label.setText(f"共 {total_items} 项")
 
             if total_items == 0:
-                empty = QWidget()
+                empty = QWidget(self._cards_widget)
                 empty.setAcceptDrops(True)
                 empty_layout = QVBoxLayout(empty)
                 empty_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -869,11 +868,16 @@ class HomePage(QWidget):
                     row_width = 0
 
                 if item_type == "folder":
-                    card = FolderCard(item)
+                    card = FolderCard(item, self._cards_widget)
                     card.folder_clicked.connect(self._on_folder_selected)
                     card.folder_context_menu.connect(self._on_folder_card_context_menu)
                 else:
-                    card = ManuscriptCard(item)
+                    card = ManuscriptCard(
+                        item,
+                        self._cards_widget,
+                        batch_mode=self._batch_mode,
+                        selected=item.id in self._selected_manuscript_ids,
+                    )
                     card.play_clicked.connect(self.navigate_to_prompter.emit)
                     card.edit_clicked.connect(lambda mid: self.navigate_to_editor.emit(
                         next((m for m in self._manuscripts if m.id == mid), None)

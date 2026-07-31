@@ -642,6 +642,7 @@ class HomePage(QWidget):
 
         root_btn = QPushButton("全部稿件")
         root_btn.setObjectName("breadcrumbBtn")
+        root_btn.setFixedHeight(36)
         root_btn.setMaximumWidth(100)
         root_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         root_btn.setStyleSheet(
@@ -663,6 +664,7 @@ class HomePage(QWidget):
             hidden_folders = tuple(self._folder_path[:-1])
             overflow_btn = QPushButton("…")
             overflow_btn.setObjectName("breadcrumbBtn")
+            overflow_btn.setFixedHeight(36)
             overflow_btn.setToolTip("显示上级目录")
             overflow_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             overflow_btn.clicked.connect(
@@ -680,6 +682,7 @@ class HomePage(QWidget):
             is_last = i == len(visible_path) - 1
             btn = QPushButton(f.name)
             btn.setObjectName("breadcrumbBtn")
+            btn.setFixedHeight(36)
             btn.setMaximumWidth(150)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             elided_name = btn.fontMetrics().elidedText(

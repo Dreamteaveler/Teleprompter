@@ -464,6 +464,7 @@ class HomePage(QWidget):
         self._scroll_layout = QVBoxLayout(self._scroll_content)
         self._scroll_layout.setContentsMargins(40, 16, 40, 24)
         self._scroll_layout.setSpacing(16)
+        self._update_toolbar_responsiveness(self.width())
 
         self._count_label = QLabel("共 0 项")
         self._count_label.setObjectName("itemCountLabel")
@@ -625,6 +626,13 @@ class HomePage(QWidget):
             margin,
             8,
         )
+        if hasattr(self, "_scroll_layout"):
+            self._scroll_layout.setContentsMargins(
+                margin,
+                16,
+                margin,
+                24,
+            )
         self._batch_bar.set_compact(compact)
 
     def _update_breadcrumb(self):
@@ -640,7 +648,7 @@ class HomePage(QWidget):
 
         arrow_style = "color: #555; font-size: 13px; padding: 0 4px; background: transparent; border: none;"
         breadcrumb_style = (
-            "QPushButton { color: %s; background: transparent; border: none; font-size: 13px; padding: 2px 6px; }"
+            "QPushButton { color: %s; background: transparent; border: none; font-size: 13px; padding: 2px 6px 2px 0; }"
             "QPushButton:hover { color: #DB9D16; }"
             "QPushButton:focus { border: 1px solid #DB9D16; border-radius: 4px; }"
         )
@@ -948,7 +956,12 @@ class HomePage(QWidget):
             row_layout = None
             card_spacing = 12
             win = self.window()
-            available_width = (win.width() if win else 1280) - 80
+            margins = self._scroll_layout.contentsMargins()
+            available_width = (
+                (win.width() if win else 1280)
+                - margins.left()
+                - margins.right()
+            )
             if available_width <= 100:
                 available_width = 1100
             row_width = 0

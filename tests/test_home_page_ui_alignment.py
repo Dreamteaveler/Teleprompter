@@ -5,6 +5,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PyQt6.QtCore import QPoint
 from PyQt6.QtWidgets import QApplication, QPushButton
 
 from app import database
@@ -121,6 +122,36 @@ class HomePageUiAlignmentTest(unittest.TestCase):
         self.assertGreaterEqual(len(buttons), 3)
         for button in buttons:
             self.assertIn("font-size: 13px", button.styleSheet())
+
+    def _assert_breadcrumb_left_aligns_with_count(self, page):
+        root_button = next(
+            button
+            for button in page._breadcrumb.findChildren(QPushButton)
+            if button.objectName() == "breadcrumbBtn"
+        )
+        root_left = root_button.mapTo(page, QPoint(0, 0)).x()
+        count_left = page._count_label.mapTo(page, QPoint(0, 0)).x()
+        self.assertEqual(root_left, count_left)
+        self.assertIn(
+            "padding: 2px 6px 2px 0",
+            root_button.styleSheet(),
+        )
+
+    def test_breadcrumb_left_aligns_with_count_in_wide_window(self):
+        page = self._track(HomePage())
+        page.resize(1280, 720)
+        page.show()
+        self._app.processEvents()
+
+        self._assert_breadcrumb_left_aligns_with_count(page)
+
+    def test_breadcrumb_left_aligns_with_count_in_compact_window(self):
+        page = self._track(HomePage())
+        page.resize(1000, 700)
+        page.show()
+        self._app.processEvents()
+
+        self._assert_breadcrumb_left_aligns_with_count(page)
 
 
 if __name__ == "__main__":

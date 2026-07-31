@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
         if not self._prompter_created:
             logger.debug("_ensure_prompter: 开始创建 PrompterPage (WebEngine)...")
             self.setUpdatesEnabled(False)
-            self._prompter = PrompterPage()
+            self._prompter = PrompterPage(self._stack)
             logger.debug("_ensure_prompter: PrompterPage 对象已创建, 连接信号...")
             self._prompter.hide()
             self._stack.insertWidget(self.PAGE_PROMPTER, self._prompter)
@@ -195,13 +195,4 @@ class MainWindow(QMainWindow):
                 self._prompter._control_panel.close()
         self.hide()
         logger.debug("主窗口已隐藏, 接受退出")
-        # 从 __main__ 模块获取事件列表（python main.py 时模块名是 __main__）
-        import sys as _sys
-        m = _sys.modules.get('__main__')
-        events = getattr(m, '_WINDOW_EVENTS', []) if m else []
-        path = os.path.join(os.path.expanduser("~"), "Desktop", "teleprompter_windows.log")
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(f"total: {len(events)}\n")
-            f.write("\n".join(events) + "\n")
-        print(f"[monitor] wrote {len(events)} events to desktop", file=_sys.stderr)
         event.accept()

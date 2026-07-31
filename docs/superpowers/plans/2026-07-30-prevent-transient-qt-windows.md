@@ -4,7 +4,7 @@
 
 **Goal:** Stop transient native windows while the app creates the teleprompter page or rebuilds manuscript cards.
 
-**Architecture:** Qt turns a QWidget without a parent into a top-level window. Construct dynamic widgets with their final owners from the start, and use a Qt event filter to detect unwanted ParentAboutToChange events.
+**Architecture:** Qt turns a QWidget without a parent into a top-level window. Construct dynamic widgets with their final owners from the start, and use a Qt event filter to detect unwanted ParentChange events.
 
 **Tech Stack:** Python 3.12, PyQt6, unittest, SQLite test fixtures.
 
@@ -24,7 +24,7 @@
 - Test: `tests/test_window_parenting.py`
 
 **Interfaces:**
-- Consumes: `HomePage.refresh()`, `MainWindow._ensure_prompter()`, and `QEvent.Type.ParentAboutToChange`.
+- Consumes: `HomePage.refresh()`, `MainWindow._ensure_prompter()`, and `QEvent.Type.ParentChange`.
 - Produces: Regression coverage that fails if a dynamic content widget is initially a top-level window.
 
 - [ ] **Step 1: Write the failing test**
@@ -43,7 +43,7 @@ def test_ensure_prompter_constructs_the_page_as_a_stack_child(self):
 
 Run: `python -m unittest tests.test_window_parenting -v`
 
-Expected: FAIL because current dynamic widgets are constructed with no parent before their visible layout reparents them.
+Expected: FAIL because the current `FolderCard`, `ManuscriptCard`, and `PrompterPage` objects are constructed with no parent before their visible layouts reparent them.
 
 - [ ] **Step 3: Implement the minimal parent-ownership fix**
 
@@ -106,4 +106,3 @@ Run: `git status --short`
 Run: `git add app/pages/home_page.py app/pages/main_window.py tests/test_window_parenting.py docs/superpowers/plans/2026-07-30-prevent-transient-qt-windows.md`
 
 Run: `git commit -m "fix: prevent transient Qt windows during page rebuilds"`
-

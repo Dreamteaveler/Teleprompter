@@ -71,6 +71,7 @@ class ManuscriptCard(QFrame):
 
         top_row = QHBoxLayout()
         self.selection_checkbox = QCheckBox()
+        self.selection_checkbox.setObjectName("cardCheckbox")
         self.selection_checkbox.setToolTip("选择这篇讲稿")
         self.selection_checkbox.setAccessibleName(
             f"选择讲稿：{manuscript.title or '未命名稿件'}"
@@ -226,6 +227,7 @@ class FolderCard(QFrame):
 
         icon_row = QHBoxLayout()
         self.selection_checkbox = QCheckBox()
+        self.selection_checkbox.setObjectName("cardCheckbox")
         self.selection_checkbox.setToolTip("选择这个文件夹")
         self.selection_checkbox.setAccessibleName(
             f"选择文件夹：{folder.name}"

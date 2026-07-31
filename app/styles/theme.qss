@@ -408,6 +408,21 @@ QCheckBox::indicator:checked {
     border-color: #DB9D16;
 }
 
+/* 卡片右上角选择复选框：透明底避免在悬停/选中卡片上形成暗色块 */
+QCheckBox#cardCheckbox::indicator {
+    background-color: transparent;
+    border: 1px solid #4a4a4a;
+}
+
+QCheckBox#cardCheckbox::indicator:hover {
+    border-color: #DB9D16;
+}
+
+QCheckBox#cardCheckbox::indicator:checked {
+    background-color: #DB9D16;
+    border-color: #DB9D16;
+}
+
 /* ─── Splitter ───────────────────────────────── */
 QSplitter::handle {
     background-color: #2e2e2e;

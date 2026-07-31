@@ -241,6 +241,29 @@ class HomePageBatchModeTest(unittest.TestCase):
             card.width() * 0.6,
         )
 
+    def test_card_checkboxes_use_dedicated_style_hook(self):
+        manuscript_card = self._track(
+            ManuscriptCard(
+                database.create_manuscript("稿件", "body"),
+                batch_mode=True,
+            )
+        )
+        folder_card = self._track(
+            FolderCard(
+                database.create_folder("文件夹"),
+                batch_mode=True,
+            )
+        )
+
+        self.assertEqual(
+            manuscript_card.selection_checkbox.objectName(),
+            "cardCheckbox",
+        )
+        self.assertEqual(
+            folder_card.selection_checkbox.objectName(),
+            "cardCheckbox",
+        )
+
     def test_home_page_select_all_uses_visible_manuscripts_only(self):
         first = database.create_manuscript("可见一", "one")
         second = database.create_manuscript("可见二", "two")

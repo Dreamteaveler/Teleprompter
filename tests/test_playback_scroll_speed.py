@@ -9,11 +9,11 @@ class PlaybackScrollSpeedTest(unittest.TestCase):
         self.mixin._font_size = 24
 
     def test_scroll_speed_at_two_seconds_is_gently_accelerated(self):
-        # 旧曲线（elapsed**2.5 * 0.012 * 字号）在 2 秒时约 2.205
+        # 指数保持 2.5，系数降到 0.010：2 秒时约 1.934（原 2.205）
         speed = self.mixin._compute_scroll_speed(2.0)
 
         self.assertLess(speed, 2.0)
-        self.assertAlmostEqual(speed, 1.536, places=3)
+        self.assertAlmostEqual(speed, 1.934, places=3)
 
     def test_scroll_speed_increases_monotonically(self):
         speeds = [

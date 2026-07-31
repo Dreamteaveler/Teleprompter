@@ -196,10 +196,21 @@ class ManuscriptCard(QFrame):
 class FolderCard(QFrame):
     folder_clicked = pyqtSignal(int)
     folder_context_menu = pyqtSignal(int, QPoint)
+    selection_toggled = pyqtSignal(int, bool)
 
-    def __init__(self, folder: Folder, parent=None):
+    def __init__(
+        self,
+        folder: Folder,
+        parent=None,
+        *,
+        batch_mode: bool = False,
+        selected: bool = False,
+    ):
         super().__init__(parent)
         self._folder = folder
+        self._batch_mode = batch_mode
+        self._selected = selected
+        self._hovered = False
         self.setObjectName("card")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFixedSize(CARD_WIDTH, CARD_HEIGHT)
@@ -213,6 +224,17 @@ class FolderCard(QFrame):
         layout.setSpacing(0)
 
         icon_row = QHBoxLayout()
+        self.selection_checkbox = QCheckBox()
+        self.selection_checkbox.setToolTip("选择这个文件夹")
+        self.selection_checkbox.setAccessibleName(
+            f"选择文件夹：{folder.name}"
+        )
+        self.selection_checkbox.setVisible(batch_mode)
+        self.selection_checkbox.toggled.connect(
+            self._on_selection_checkbox_toggled
+        )
+        icon_row.addWidget(self.selection_checkbox)
+
         icon = QLabel("📁")
         icon.setFont(QFont("Segoe UI Emoji", 28))
         icon_row.addWidget(icon)
@@ -235,25 +257,60 @@ class FolderCard(QFrame):
         layout.addWidget(date_label)
         layout.addStretch()
 
+        self.set_selected(selected)
+
+    def _on_selection_checkbox_toggled(self, selected: bool):
+        self._selected = selected
+        self._apply_card_style()
+        self.selection_toggled.emit(self._folder.id, selected)
+
+    def is_selected(self) -> bool:
+        return self._selected
+
+    def set_selected(self, selected: bool):
+        self._selected = selected
+        was_blocked = self.selection_checkbox.blockSignals(True)
+        self.selection_checkbox.setChecked(selected)
+        self.selection_checkbox.blockSignals(was_blocked)
+        self._apply_card_style()
+
+    def _apply_card_style(self):
+        if self._selected:
+            border = "2px solid #DB9D16"
+            background = "rgba(219, 157, 22, 0.12)"
+        elif self._hovered:
+            border = "1px solid rgba(219, 157, 22, 0.5)"
+            background = "#171717"
+        else:
+            border = "1px solid #2e2e2e"
+            background = "#141414"
+        self.setStyleSheet(
+            f"""QFrame#card {{
+                background-color: {background};
+                border: {border};
+                border-radius: 12px;
+            }}"""
+        )
+
     def enterEvent(self, event):
         super().enterEvent(event)
-        self.setStyleSheet("""QFrame#card {
-            border-color: rgba(219, 157, 22, 0.5);
-            background-color: #171717;
-            border-radius: 12px;
-        }""")
+        self._hovered = True
+        self._apply_card_style()
 
     def leaveEvent(self, event):
         super().leaveEvent(event)
-        self.setStyleSheet("""QFrame#card {
-            background-color: #141414;
-            border: 1px solid #2e2e2e;
-            border-radius: 12px;
-        }""")
+        self._hovered = False
+        self._apply_card_style()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.folder_clicked.emit(self._folder.id)
+            if self._batch_mode:
+                self.selection_checkbox.toggle()
+            else:
+                self.folder_clicked.emit(self._folder.id)
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
 
 class DropOverlay(QLabel):

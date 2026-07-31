@@ -10,7 +10,7 @@ from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
 from app import database
-from app.pages.home_page import HomePage, ManuscriptCard
+from app.pages.home_page import FolderCard, HomePage, ManuscriptCard
 
 
 class HomePageBatchModeTest(unittest.TestCase):
@@ -156,6 +156,63 @@ class HomePageBatchModeTest(unittest.TestCase):
         )
 
         self.assertEqual(played, [manuscript.id])
+
+    def test_folder_card_checkbox_toggles_selection_in_batch_mode(self):
+        folder = database.create_folder("文件夹")
+        card = self._track(
+            FolderCard(
+                folder,
+                batch_mode=True,
+                selected=False,
+            )
+        )
+        selected = []
+        entered = []
+        card.selection_toggled.connect(
+            lambda folder_id, value: selected.append((folder_id, value))
+        )
+        card.folder_clicked.connect(entered.append)
+
+        card.selection_checkbox.click()
+
+        self.assertEqual(selected, [(folder.id, True)])
+        self.assertEqual(entered, [])
+        self.assertTrue(card.is_selected())
+
+    def test_clicking_folder_card_body_toggles_selection_in_batch_mode(self):
+        folder = database.create_folder("文件夹")
+        card = self._track(FolderCard(folder, batch_mode=True))
+        selected = []
+        card.selection_toggled.connect(
+            lambda folder_id, value: selected.append((folder_id, value))
+        )
+        card.show()
+        self._app.processEvents()
+
+        QTest.mouseClick(
+            card,
+            Qt.MouseButton.LeftButton,
+            pos=QPoint(220, 160),
+        )
+
+        self.assertEqual(selected, [(folder.id, True)])
+        self.assertTrue(card.is_selected())
+
+    def test_clicking_folder_card_enters_folder_in_normal_mode(self):
+        folder = database.create_folder("文件夹")
+        card = self._track(FolderCard(folder))
+        entered = []
+        card.folder_clicked.connect(entered.append)
+        card.show()
+        self._app.processEvents()
+
+        QTest.mouseClick(
+            card,
+            Qt.MouseButton.LeftButton,
+            pos=QPoint(220, 160),
+        )
+
+        self.assertEqual(entered, [folder.id])
 
     def test_home_page_select_all_uses_visible_manuscripts_only(self):
         first = database.create_manuscript("可见一", "one")

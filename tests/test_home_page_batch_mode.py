@@ -214,6 +214,33 @@ class HomePageBatchModeTest(unittest.TestCase):
 
         self.assertEqual(entered, [folder.id])
 
+    def test_folder_card_checkbox_sits_at_top_right(self):
+        folder = database.create_folder("文件夹")
+        card = self._track(FolderCard(folder, batch_mode=True))
+        card.show()
+        self._app.processEvents()
+
+        self.assertGreater(
+            card.selection_checkbox.x(),
+            card.width() * 0.6,
+        )
+
+    def test_manuscript_card_checkbox_sits_at_top_right(self):
+        manuscript = database.create_manuscript("稿件", "body")
+        card = self._track(
+            ManuscriptCard(
+                manuscript,
+                batch_mode=True,
+            )
+        )
+        card.show()
+        self._app.processEvents()
+
+        self.assertGreater(
+            card.selection_checkbox.x(),
+            card.width() * 0.6,
+        )
+
     def test_home_page_select_all_uses_visible_manuscripts_only(self):
         first = database.create_manuscript("可见一", "one")
         second = database.create_manuscript("可见二", "two")

@@ -79,12 +79,12 @@ class ManuscriptCard(QFrame):
         self.selection_checkbox.toggled.connect(
             self._on_selection_checkbox_toggled
         )
-        top_row.addWidget(self.selection_checkbox)
 
         icon = QLabel("📄")
         icon.setFont(QFont("Segoe UI Emoji", 14))
         top_row.addWidget(icon)
         top_row.addStretch()
+        top_row.addWidget(self.selection_checkbox)
 
         action_btn_style = (
             "QPushButton { background: transparent; border: none; color: #555; padding: 2px 6px; font-size: 11px; }"
@@ -234,7 +234,6 @@ class FolderCard(QFrame):
         self.selection_checkbox.toggled.connect(
             self._on_selection_checkbox_toggled
         )
-        icon_row.addWidget(self.selection_checkbox)
 
         icon = QLabel("📁")
         icon.setFont(QFont("Segoe UI Emoji", 28))
@@ -245,6 +244,7 @@ class FolderCard(QFrame):
         count_label = QLabel(str(ms_count))
         count_label.setStyleSheet("color: #9e9e9e; font-size: 11px; background: transparent;")
         icon_row.addWidget(count_label)
+        icon_row.addWidget(self.selection_checkbox)
         layout.addLayout(icon_row)
 
         name_label = QLabel(folder.name)

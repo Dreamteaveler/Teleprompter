@@ -104,6 +104,24 @@ class HomePageUiAlignmentTest(unittest.TestCase):
 
         self.assertEqual(set(heights), {TOOLBAR_HEIGHT})
 
+    def test_breadcrumb_buttons_use_readable_consistent_style(self):
+        parent = database.create_folder("父")
+        child = database.create_folder("子", parent_id=parent.id)
+        grandchild = database.create_folder("孙", parent_id=child.id)
+        page = self._track(HomePage())
+        page._on_folder_selected(grandchild.id)
+        page.show()
+        self._app.processEvents()
+
+        buttons = [
+            button
+            for button in page._breadcrumb.findChildren(QPushButton)
+            if button.objectName() == "breadcrumbBtn"
+        ]
+        self.assertGreaterEqual(len(buttons), 3)
+        for button in buttons:
+            self.assertIn("font-size: 13px", button.styleSheet())
+
 
 if __name__ == "__main__":
     unittest.main()

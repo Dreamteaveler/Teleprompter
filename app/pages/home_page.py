@@ -638,7 +638,12 @@ class HomePage(QWidget):
             elif item.layout():
                 self._clear_layout(item.layout())
 
-        arrow_style = "color: #555; font-size: 12px; padding: 0 4px; background: transparent; border: none;"
+        arrow_style = "color: #555; font-size: 13px; padding: 0 4px; background: transparent; border: none;"
+        breadcrumb_style = (
+            "QPushButton { color: %s; background: transparent; border: none; font-size: 13px; padding: 2px 6px; }"
+            "QPushButton:hover { color: #DB9D16; }"
+            "QPushButton:focus { border: 1px solid #DB9D16; border-radius: 4px; }"
+        )
 
         root_btn = QPushButton("全部稿件")
         root_btn.setObjectName("breadcrumbBtn")
@@ -646,9 +651,8 @@ class HomePage(QWidget):
         root_btn.setMaximumWidth(100)
         root_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         root_btn.setStyleSheet(
-            "QPushButton { color: %s; background: transparent; border: none; font-size: 12px; padding: 2px 6px; }"
-            "QPushButton:hover { color: #DB9D16; }"
-            "QPushButton:focus { border: 1px solid #DB9D16; border-radius: 4px; }" % (
+            breadcrumb_style
+            % (
                 "#DB9D16" if self._current_folder_id is None else "#9e9e9e"
             )
         )
@@ -667,6 +671,7 @@ class HomePage(QWidget):
             overflow_btn.setFixedHeight(36)
             overflow_btn.setToolTip("显示上级目录")
             overflow_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            overflow_btn.setStyleSheet(breadcrumb_style % "#9e9e9e")
             overflow_btn.clicked.connect(
                 lambda checked=False, folders=hidden_folders, button=overflow_btn:
                 self._show_breadcrumb_overflow(folders, button)
@@ -694,9 +699,8 @@ class HomePage(QWidget):
             if elided_name != f.name:
                 btn.setToolTip(f.name)
             btn.setStyleSheet(
-                "QPushButton { color: %s; background: transparent; border: none; font-size: 12px; padding: 2px 6px; }"
-                "QPushButton:hover { color: #DB9D16; }"
-                "QPushButton:focus { border: 1px solid #DB9D16; border-radius: 4px; }" % (
+                breadcrumb_style
+                % (
                     "#DB9D16" if is_last else "#9e9e9e"
                 )
             )

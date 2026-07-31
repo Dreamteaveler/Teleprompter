@@ -26,6 +26,7 @@ from app.database import (
     delete_manuscripts, create_manuscript,
     list_folders, get_folder, create_folder, rename_folder, delete_folder,
     get_folder_path, get_manuscript_count_in_folder, move_manuscripts,
+    move_folders, delete_folders,
 )
 from app.models import Manuscript, Folder
 from app.file_importer import import_file
@@ -342,6 +343,8 @@ class HomePage(QWidget):
         self._folder_path: list[Folder] = []
         self._batch_mode = False
         self._selected_manuscript_ids: set[int] = set()
+        self._selected_folder_ids: set[int] = set()
+        self._sub_folders: list[Folder] = []
         self._relayout_timer = QTimer(self)
         self._relayout_timer.setSingleShot(True)
         self._relayout_timer.timeout.connect(self._render_cards)
@@ -489,6 +492,7 @@ class HomePage(QWidget):
             return
         self._batch_mode = True
         self._selected_manuscript_ids.clear()
+        self._selected_folder_ids.clear()
         self._sync_organize_toolbar_context()
         self._toolbar_stack.setCurrentWidget(self._batch_bar)
         self._render_cards()
@@ -499,6 +503,7 @@ class HomePage(QWidget):
         )
         self._batch_mode = False
         self._selected_manuscript_ids.clear()
+        self._selected_folder_ids.clear()
         self._toolbar_stack.setCurrentWidget(self._normal_toolbar)
         if render and was_active:
             self._render_cards()
@@ -506,10 +511,16 @@ class HomePage(QWidget):
     def _visible_manuscript_ids(self) -> set[int]:
         return {manuscript.id for manuscript in self._manuscripts}
 
+    def _visible_folder_ids(self) -> set[int]:
+        return {folder.id for folder in self._sub_folders}
+
     def _update_batch_bar(self):
         self._batch_bar.set_selection_state(
-            selected_count=len(self._selected_manuscript_ids),
-            visible_count=len(self._manuscripts),
+            selected_count=(
+                len(self._selected_manuscript_ids)
+                + len(self._selected_folder_ids)
+            ),
+            visible_count=len(self._manuscripts) + len(self._sub_folders),
         )
 
     def _toggle_manuscript_selection(
@@ -525,6 +536,19 @@ class HomePage(QWidget):
             self._selected_manuscript_ids.discard(manuscript_id)
         self._update_batch_bar()
 
+    def _toggle_folder_selection(
+        self,
+        folder_id: int,
+        selected: bool,
+    ):
+        if folder_id not in self._visible_folder_ids():
+            return
+        if selected:
+            self._selected_folder_ids.add(folder_id)
+        else:
+            self._selected_folder_ids.discard(folder_id)
+        self._update_batch_bar()
+
     def _select_all_visible(self, selected: bool):
         if not self._batch_mode:
             return
@@ -532,8 +556,10 @@ class HomePage(QWidget):
             self._selected_manuscript_ids = (
                 self._visible_manuscript_ids()
             )
+            self._selected_folder_ids = self._visible_folder_ids()
         else:
             self._selected_manuscript_ids.clear()
+            self._selected_folder_ids.clear()
         self._render_cards()
 
     def _on_new_folder(self):
@@ -852,9 +878,13 @@ class HomePage(QWidget):
             sub_folders = list_folders(parent_id=self._current_folder_id)
         else:
             sub_folders = list_folders(parent_id=None)
+        self._sub_folders = sub_folders
 
         self._selected_manuscript_ids.intersection_update(
             self._visible_manuscript_ids()
+        )
+        self._selected_folder_ids.intersection_update(
+            self._visible_folder_ids()
         )
 
         self.setUpdatesEnabled(False)
@@ -925,9 +955,17 @@ class HomePage(QWidget):
                     row_width = 0
 
                 if item_type == "folder":
-                    card = FolderCard(item, self._cards_widget)
+                    card = FolderCard(
+                        item,
+                        self._cards_widget,
+                        batch_mode=self._batch_mode,
+                        selected=item.id in self._selected_folder_ids,
+                    )
                     card.folder_clicked.connect(self._on_folder_selected)
                     card.folder_context_menu.connect(self._on_folder_card_context_menu)
+                    card.selection_toggled.connect(
+                        self._toggle_folder_selection
+                    )
                 else:
                     card = ManuscriptCard(
                         item,
@@ -960,9 +998,14 @@ class HomePage(QWidget):
         target_folder_id: int | None,
     ) -> int:
         manuscript_ids = tuple(self._selected_manuscript_ids)
-        if not manuscript_ids:
+        folder_ids = tuple(self._selected_folder_ids)
+        if not manuscript_ids and not folder_ids:
             return 0
-        moved = move_manuscripts(manuscript_ids, target_folder_id)
+        moved = 0
+        if manuscript_ids:
+            moved += move_manuscripts(manuscript_ids, target_folder_id)
+        if folder_ids:
+            moved += move_folders(folder_ids, target_folder_id)
         self._exit_batch_mode(render=False)
         self._on_search(self._search_input.text())
         return moved
@@ -1000,41 +1043,59 @@ class HomePage(QWidget):
             if manuscript.id in self._selected_manuscript_ids
         ]
 
+    def _selected_folders(self) -> list[Folder]:
+        return [
+            folder
+            for folder in self._sub_folders
+            if folder.id in self._selected_folder_ids
+        ]
+
     @staticmethod
-    def _batch_delete_message(selected: list[Manuscript]) -> str:
+    def _batch_delete_message(
+        folders: list[Folder],
+        selected: list[Manuscript],
+    ) -> str:
         titles = [
-            manuscript.title or "未命名稿件"
+            f"📁 {folder.name or '未命名文件夹'}"
+            for folder in folders
+        ] + [
+            f"📄 {manuscript.title or '未命名稿件'}"
             for manuscript in selected
         ]
-        preview = "\n".join(
-            f"• {title}" for title in titles[:5]
-        )
+        preview = "\n".join(f"• {title}" for title in titles[:5])
         remainder = len(titles) - 5
         if remainder > 0:
-            preview += f"\n• 另有 {remainder} 篇"
+            preview += f"\n• 另有 {remainder} 项"
         return (
-            f"确定要永久删除选中的 {len(titles)} 篇讲稿吗？\n\n"
-            f"{preview}\n\n此操作不可撤销。"
+            f"确定要永久删除选中的 {len(titles)} 项吗？\n\n"
+            f"{preview}\n\n"
+            "文件夹将连同其中的稿件一并删除，此操作不可撤销。"
         )
 
     def _delete_selected_now(self) -> int:
         manuscript_ids = tuple(self._selected_manuscript_ids)
-        if not manuscript_ids:
+        folder_ids = tuple(self._selected_folder_ids)
+        if not manuscript_ids and not folder_ids:
             return 0
-        deleted = delete_manuscripts(manuscript_ids)
+        deleted = 0
+        if manuscript_ids:
+            deleted += delete_manuscripts(manuscript_ids)
+        if folder_ids:
+            deleted += delete_folders(folder_ids)
         self._exit_batch_mode(render=False)
         self._on_search(self._search_input.text())
         return deleted
 
     def _delete_selected_manuscripts(self):
+        folders = self._selected_folders()
         selected = self._selected_manuscripts()
-        if not selected:
+        if not folders and not selected:
             return
 
         reply = QMessageBox.question(
             self,
             "确认批量删除",
-            self._batch_delete_message(selected),
+            self._batch_delete_message(folders, selected),
             QMessageBox.StandardButton.Yes
             | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,

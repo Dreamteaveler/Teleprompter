@@ -234,6 +234,86 @@ class HomePageBatchModeTest(unittest.TestCase):
         )
         self.assertNotIn(hidden.id, page._selected_manuscript_ids)
 
+    def test_render_cards_in_batch_mode_shows_folder_checkbox(self):
+        database.create_folder("文件夹")
+        page = self._create_page()
+        page.show()
+        self._app.processEvents()
+
+        page._enter_batch_mode()
+        self._app.processEvents()
+
+        cards = page._cards_widget.findChildren(FolderCard)
+        self.assertTrue(cards)
+        self.assertTrue(
+            all(card.selection_checkbox.isVisible() for card in cards)
+        )
+
+    def test_clicking_rendered_folder_card_selects_folder(self):
+        folder = database.create_folder("文件夹")
+        page = self._create_page()
+        page.show()
+        self._app.processEvents()
+
+        page._enter_batch_mode()
+        self._app.processEvents()
+
+        card = page._cards_widget.findChildren(FolderCard)[0]
+        card.selection_checkbox.click()
+
+        self.assertEqual(page._selected_folder_ids, {folder.id})
+
+    def test_select_all_includes_folders_and_manuscripts(self):
+        folder = database.create_folder("文件夹")
+        manuscript = database.create_manuscript("稿件", "body")
+        page = self._create_page()
+
+        page._enter_batch_mode()
+        page._select_all_visible(True)
+
+        self.assertEqual(page._selected_folder_ids, {folder.id})
+        self.assertEqual(page._selected_manuscript_ids, {manuscript.id})
+
+    def test_home_page_moves_selected_folders_and_manuscripts(self):
+        folder = database.create_folder("移动文件夹")
+        manuscript = database.create_manuscript("移动稿件", "body")
+        target = database.create_folder("目标")
+        page = self._create_page()
+        page._enter_batch_mode()
+        page._toggle_folder_selection(folder.id, True)
+        page._toggle_manuscript_selection(manuscript.id, True)
+
+        moved = page._move_selected_to_folder(target.id)
+
+        self.assertEqual(moved, 2)
+        self.assertEqual(
+            database.get_folder(folder.id).parent_folder_id,
+            target.id,
+        )
+        self.assertEqual(
+            database.get_manuscript(manuscript.id).parent_folder_id,
+            target.id,
+        )
+
+    def test_home_page_deletes_selected_folders_and_manuscripts(self):
+        folder = database.create_folder("删除文件夹")
+        database.create_manuscript(
+            "文件夹内稿件",
+            "a",
+            folder_id=folder.id,
+        )
+        manuscript = database.create_manuscript("删除稿件", "b")
+        page = self._create_page()
+        page._enter_batch_mode()
+        page._toggle_folder_selection(folder.id, True)
+        page._toggle_manuscript_selection(manuscript.id, True)
+
+        deleted = page._delete_selected_now()
+
+        self.assertEqual(deleted, 2)
+        self.assertIsNone(database.get_folder(folder.id))
+        self.assertIsNone(database.get_manuscript(manuscript.id))
+
     def test_search_change_exits_batch_mode_and_clears_selection(self):
         manuscript = database.create_manuscript("测试稿件", "body")
         page = self._create_page()

@@ -215,6 +215,87 @@ def get_manuscript_count_in_folder(folder_id: int) -> int:
         return row["cnt"]
 
 
+def get_folder_subtree_ids(folder_ids: Iterable[int]) -> set[int]:
+    """递归收集指定文件夹及其所有子孙的 ID。"""
+    ids = _unique_ids(folder_ids)
+    if not ids:
+        return set()
+
+    subtree = set(ids)
+    pending = list(ids)
+    with get_connection() as conn:
+        while pending:
+            current = pending.pop()
+            rows = conn.execute(
+                "SELECT id FROM folders WHERE parent_folder_id = ?",
+                (current,),
+            ).fetchall()
+            for row in rows:
+                if row["id"] not in subtree:
+                    subtree.add(row["id"])
+                    pending.append(row["id"])
+    return subtree
+
+
+def move_folders(
+    folder_ids: Iterable[int],
+    target_folder_id: int | None = None,
+) -> int:
+    """批量移动文件夹，返回实际移动数量。
+
+    目标不能位于任一被移动文件夹的子树内，否则抛出 ValueError。
+    """
+    ids = _unique_ids(folder_ids)
+    if not ids:
+        return 0
+    if (
+        target_folder_id is not None
+        and target_folder_id in get_folder_subtree_ids(ids)
+    ):
+        raise ValueError("不能将文件夹移入自身或其子文件夹")
+
+    placeholders = ", ".join("?" for _ in ids)
+    now = now_iso()
+    with get_connection() as conn:
+        cursor = conn.execute(
+            f"""
+            UPDATE folders
+            SET parent_folder_id = ?, updated_at = ?
+            WHERE id IN ({placeholders})
+              AND parent_folder_id IS NOT ?
+            """,
+            (target_folder_id, now, *ids, target_folder_id),
+        )
+        conn.commit()
+        return cursor.rowcount
+
+
+def delete_folders(folder_ids: Iterable[int]) -> int:
+    """批量递归删除文件夹（含子树内稿件），返回删除的文件夹数量。"""
+    ids = _unique_ids(folder_ids)
+    if not ids:
+        return 0
+
+    subtree = get_folder_subtree_ids(ids)
+    with get_connection() as conn:
+        if subtree:
+            subtree_placeholders = ", ".join("?" for _ in subtree)
+            conn.execute(
+                f"""
+                DELETE FROM manuscripts
+                WHERE parent_folder_id IN ({subtree_placeholders})
+                """,
+                tuple(subtree),
+            )
+        placeholders = ", ".join("?" for _ in ids)
+        cursor = conn.execute(
+            f"DELETE FROM folders WHERE id IN ({placeholders})",
+            ids,
+        )
+        conn.commit()
+        return cursor.rowcount
+
+
 # ─── Manuscript CRUD ───────────────────────────────────────────────
 
 

@@ -55,6 +55,10 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._start_time = 0.0
         self._pixels_per_second = 0.0
         self._page_ready = False
+        self._content_version = 0
+        self._inline_editing = False
+        self._inline_saving = False
+        self._inline_actions = []
         self._reading_line_y = 0
         self._pending_scroll_ratio: float | None = None
         self._mirror_scale: float = 1.0
@@ -62,6 +66,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._auto_resume: bool = False
         self._sync_pending: bool = False
         self._sync_version: int = 0
+        self._sync_pending = False
         self._accumulated_scroll: float = 0.0
         self._pending_delta: float = 0.0
 
@@ -174,20 +179,19 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             body = "<p style='color:#555;'>（空稿件）</p>"
         else:
             stripped = text.strip()
-            if '<' in stripped and '>' in stripped:
+            if re.match(r'<(?:!DOCTYPE|html\b|body\b|p\b|div\b|table\b|h[1-6]\b|span\b|img\b|ul\b|ol\b|pre\b|blockquote\b|strong\b|em\b|b\b|i\b)', stripped, re.IGNORECASE):
                 body = self._extract_body(stripped)
             else:
                 body = self._plain_to_html(stripped)
 
-        body = html_module.unescape(body)
         body = re.sub(
             r'<img[^>]*class="formula"[^>]*data-latex="([^"]*)"[^>]*/?>',
-            r'$\1$',
+            lambda m: '$' + html_module.escape(html_module.unescape(m.group(1)), quote=False) + '$',
             body, flags=re.DOTALL,
         )
         body = re.sub(
             r'<img[^>]*class="formula"[^>]*alt="([^"]*)"[^>]*/?>',
-            r'$\1$',
+            lambda m: '$' + html_module.escape(html_module.unescape(m.group(1)), quote=False) + '$',
             body, flags=re.DOTALL,
         )
 
@@ -252,7 +256,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         )
 
         for key, math_block in math_blocks.items():
-            html = html.replace(key, math_block)
+            html = html.replace(key, html_module.escape(math_block, quote=False))
 
         return html
 
@@ -262,21 +266,24 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._page_ready = False
             logger.warning("WebEngine 页面加载失败")
             return
+        version = self._content_version
+        ratio = self._pending_scroll_ratio
+        restore = '' if ratio is None else f'window.scrollTo(0, Math.max(0, maxY*{ratio}));'
+        self._view.page().runJavaScript(
+            '(function(){var d=document.documentElement;'
+            'var maxY=Math.max(0,d.scrollHeight-window.innerHeight);'
+            + restore + 'return [window.pageYOffset,Math.max(d.scrollHeight,window.innerHeight)];})()',
+            lambda result: self._on_layout_restored(result, version),
+        )
+
+    def _on_layout_restored(self, result, version):
+        if version != self._content_version or not isinstance(result, list) or len(result) < 2:
+            return
+        self._on_scroll_restored(float(result[0]))
+        self._on_scroll_height(result[1])
+        self._pending_scroll_ratio = None
         self._page_ready = True
-        logger.debug("WebEngine 页面加载成功, 开始刷新滚动高度")
-        self._refresh_scroll_height()
-        QTimer.singleShot(0, self._update_reading_line)
-        if self._pending_scroll_ratio is not None:
-            ratio = self._pending_scroll_ratio
-            self._pending_scroll_ratio = None
-            self._view.page().runJavaScript(
-                f"var d=document.documentElement;"
-                f"var maxY=d.scrollHeight-window.innerHeight;"
-                f"var target=maxY*{ratio};"
-                f"window.scrollTo(0,Math.max(0,target));"
-                f"target",
-                lambda y: self._on_scroll_restored(float(y) if y is not None else 0)
-            )
+        self._update_reading_line()
         self._start_sync_timer()
         if self._auto_resume:
             self._auto_resume = False
@@ -295,9 +302,10 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         menu.exec(self._view.mapToGlobal(pos))
 
     def _refresh_scroll_height(self):
+        version = self._content_version
         self._view.page().runJavaScript(
             "Math.max(document.documentElement.scrollHeight, window.innerHeight)",
-            self._on_scroll_height
+            lambda height: self._on_scroll_height(height) if version == self._content_version else None,
         )
 
     def _on_scroll_height(self, height):
@@ -309,16 +317,29 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
 
     def _load_content(self, text: str, keep_scroll: bool = False):
         if keep_scroll:
-            self._pending_scroll_ratio = self._scroll_position / max(1, self._scroll_height)
+            self._pending_scroll_ratio = self._current_scroll_ratio()
         else:
             self._pending_scroll_ratio = None
         self._page_ready = False
+        self._content_version += 1
+        self._invalidate_sync_requests()
         html = self._build_html(text)
         self._view.setHtml(html, mathjax_base_url())
 
+    def _current_scroll_ratio(self) -> float:
+        pending = getattr(self, '_pending_scroll_ratio', None)
+        if pending is not None:
+            return pending
+        max_y = max(0, self._scroll_height - self._view.height())
+        return max(0.0, min(1.0, self._scroll_position / max_y)) if max_y > 0 else 0.0
+
     def load_manuscript(self, manuscript: Manuscript):
+        if self._inline_editing or self._inline_saving:
+            self._finish_inline_edit(lambda: self.load_manuscript(manuscript))
+            return
         logger.debug(f"load_manuscript: id={manuscript.id}, title={manuscript.title}, content_len={len(manuscript.content)}")
         self._manuscript = manuscript
+        self._auto_resume = False
         self._load_content(manuscript.content)
         if self._is_mirror_open:
             self._sync_mirror_content(keep_scroll=False)
@@ -329,6 +350,9 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self._timer.stop()
 
     def _on_font_changed(self, value: int):
+        if self._inline_editing or self._inline_saving:
+            self._finish_inline_edit(lambda: self._on_font_changed(value))
+            return
         self._font_size = value
         if self._manuscript:
             was_playing = self._is_playing
@@ -339,6 +363,9 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         QTimer.singleShot(150, lambda: self._sync_mirror_if_open(keep_scroll=True))
 
     def _on_line_spacing_changed(self, value: int):
+        if self._inline_editing or self._inline_saving:
+            self._finish_inline_edit(lambda: self._on_line_spacing_changed(value))
+            return
         self._line_spacing = value / 10.0
         if self._manuscript:
             was_playing = self._is_playing
@@ -349,6 +376,9 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             QTimer.singleShot(150, lambda: self._sync_mirror_if_open(keep_scroll=True))
 
     def _on_margin_changed(self, value: int):
+        if self._inline_editing or self._inline_saving:
+            self._finish_inline_edit(lambda: self._on_margin_changed(value))
+            return
         self._margin = value
         if self._manuscript:
             was_playing = self._is_playing
@@ -534,9 +564,12 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
             self._mirror_window.set_reading_line_opacity(opacity)
 
     def _on_edit_requested(self):
+        if self._inline_editing or self._inline_saving:
+            self._finish_inline_edit(self._on_edit_requested)
+            return
         if not self._manuscript:
             return
-        ratio = self._scroll_position / max(1, self._scroll_height)
+        ratio = self._current_scroll_ratio()
         self._pause()
         self.edit_current_manuscript.emit(self._manuscript.id, ratio)
 
@@ -544,71 +577,93 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
         self.window().close()
 
     def _on_inline_edit(self):
-        self._inline_editing = not getattr(self, '_inline_editing', False)
-        if self._control_panel:
-            self._control_panel.set_inline_edit_state(self._inline_editing)
+        if self._inline_saving:
+            return
         if self._inline_editing:
-            if not getattr(self, '_inline_edit_warned', False):
-                self._inline_edit_warned = True
-                from PyQt6.QtWidgets import QMessageBox
-                msg = QMessageBox(
-                    QMessageBox.Icon.Information,
-                    "实时编辑提示",
-                    "实时编辑模式下无法编辑公式（公式已保护）。",
-                    QMessageBox.StandardButton.Ok,
-                    self,
-                )
-                msg.setWindowFlags(msg.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
-                msg.exec()
-            self._view.page().runJavaScript("window.enterInlineEdit&&window.enterInlineEdit()")
-            self._shortcut_mgr.set_shortcuts({
-                Qt.Key.Key_Space: self._toggle_play,
-                Qt.Key.Key_F1: self._toggle_control_panel,
-                Qt.Key.Key_F2: self._toggle_reading_line,
-                Qt.Key.Key_F11: self._toggle_fullscreen,
-                Qt.Key.Key_Escape: self._exit_fullscreen,
-                Qt.Key.Key_Up: self._start_scroll_up,
-                Qt.Key.Key_Down: self._start_scroll_down,
-                Qt.Key.Key_PageUp: self._scroll_page_up,
-                Qt.Key.Key_PageDown: self._scroll_page_down,
-                Qt.Key.Key_R: self._reset_scroll,
-                Qt.Key.Key_M: self._toggle_mirror,
-            })
-        else:
-            self._view.page().runJavaScript(
-                "var c=document.querySelector('.content');"
-                "if(c){c.contentEditable='false';}"
-                "document.body.style.userSelect='none';"
-                "window.getCleanContent?window.getCleanContent():c?c.innerHTML:''",
-                lambda html: self._save_inline_edit(html) if html else None
+            self._finish_inline_edit()
+            return
+        if not self._page_ready:
+            return
+        self._pause()
+        self._auto_resume = False
+        self._stop_scroll()
+        self._stop_speed_hold()
+        if not getattr(self, '_inline_edit_warned', False):
+            self._inline_edit_warned = True
+            from PyQt6.QtWidgets import QMessageBox
+            msg = QMessageBox(
+                QMessageBox.Icon.Information, "实时编辑提示",
+                "实时编辑模式下无法编辑公式（公式已保护）。",
+                QMessageBox.StandardButton.Ok, self,
             )
+            msg.setWindowFlags(msg.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+            msg.exec()
+        self._inline_editing = True
+        if self._control_panel:
+            self._control_panel.set_inline_edit_state(True)
+        if self._shortcut_mgr:
+            self._shortcut_mgr.set_text_editing(True)
+        self._view.page().runJavaScript("window.enterInlineEdit&&window.enterInlineEdit()")
+
+    def _finish_inline_edit(self, after=None):
+        """保存完成后再执行会离开或重载正文的操作；失败则保留可编辑DOM。"""
+        if not self._inline_editing and not self._inline_saving:
+            if after:
+                after()
+            return
+        if after:
+            self._inline_actions.append(after)
+        if self._inline_saving:
+            return
+        self._inline_saving = True
+        self._pause()
+        self._auto_resume = False
+        manuscript = self._manuscript
+
+        def saved(content):
+            try:
+                if manuscript is not self._manuscript or not isinstance(content, str):
+                    raise RuntimeError("未能读取当前编辑内容，请重试保存。")
+                self._save_inline_edit(content)
+            except Exception as error:
+                self._inline_saving = False
+                self._inline_actions.clear()
+                self._view.page().runJavaScript("window.enterInlineEdit&&window.enterInlineEdit()")
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "保存失败", f"修改尚未保存，请不要关闭窗口：\n{error}")
+                return
+            self._inline_saving = False
+            self._inline_editing = False
+            if self._control_panel:
+                self._control_panel.set_inline_edit_state(False)
+            if self._shortcut_mgr:
+                self._shortcut_mgr.set_text_editing(False)
             self._update_reading_line()
-            self._shortcut_mgr.set_shortcuts({
-                Qt.Key.Key_Space: self._toggle_play,
-                Qt.Key.Key_F1: self._toggle_control_panel,
-                Qt.Key.Key_F2: self._toggle_reading_line,
-                Qt.Key.Key_F11: self._toggle_fullscreen,
-                Qt.Key.Key_Escape: self._exit_fullscreen,
-                Qt.Key.Key_Up: self._start_scroll_up,
-                Qt.Key.Key_Down: self._start_scroll_down,
-                Qt.Key.Key_PageUp: self._scroll_page_up,
-                Qt.Key.Key_PageDown: self._scroll_page_down,
-                Qt.Key.Key_R: self._reset_scroll,
-                Qt.Key.Key_M: self._toggle_mirror,
-                Qt.Key.Key_Plus: self._speed_up,
-                Qt.Key.Key_Equal: self._speed_up,
-                Qt.Key.Key_Minus: self._speed_down,
-            })
+            actions, self._inline_actions = self._inline_actions, []
+            for action in actions:
+                action()
+
+        self._view.page().runJavaScript(
+            "var c=document.querySelector('.content');"
+            "if(c){c.contentEditable='false';}"
+            "document.body.style.userSelect='none';"
+            "window.getCleanContent?window.getCleanContent():c?c.innerHTML:null",
+            saved,
+        )
 
     def _save_inline_edit(self, html: str):
         if not self._manuscript:
-            return
+            raise RuntimeError("当前稿件不存在")
         from app.database import update_manuscript
-        update_manuscript(self._manuscript.id, self._manuscript.title, html)
+        if update_manuscript(self._manuscript.id, self._manuscript.title, html) is None:
+            raise RuntimeError("稿件已不存在，未能保存修改")
         self._manuscript.content = html
         self._sync_mirror_if_open()
 
     def _on_back(self):
+        if self._inline_editing or self._inline_saving:
+            self._finish_inline_edit(self._on_back)
+            return
         self._pause()
         self._close_mirror(remember=False)
         # 离开提词器前先退出全屏，避免其他页面也被全屏
@@ -648,6 +703,7 @@ class PrompterPage(PlaybackMixin, MirrorSyncMixin, QWidget):
                 Qt.Key.Key_Minus: self._stop_speed_hold,
             })
             self._shortcut_mgr.set_double_click_handler(self._toggle_fullscreen)
+            self._shortcut_mgr.set_keypad_toggle(self._toggle_play)
         if self._shortcut_mgr is not None:
             self._shortcut_mgr.install()
 

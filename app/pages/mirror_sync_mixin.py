@@ -54,6 +54,7 @@ class MirrorSyncMixin:
     def _sync_mirror_content(self, keep_scroll: bool = True):
         if not self._mirror_window or not self._manuscript:
             return
+        self._invalidate_sync_requests()
         main_w = self._view.width()
         mirror_w = self._mirror_window.view_width()
         if main_w > 100 and mirror_w > 100:
@@ -63,7 +64,10 @@ class MirrorSyncMixin:
         scroll_y = self._scroll_position if keep_scroll else 0.0
         self._mirror_window._reading_line_visible = self._reading_line_visible
         self._mirror_window._reading_line_opacity = self._reading_line_opacity
-        self._mirror_window.set_content(html, scroll_y, self._mirror_reading_line_y, self._mirror_scale)
+        self._mirror_window.set_content(
+            html, scroll_y, self._mirror_reading_line_y, self._mirror_scale,
+            scroll_ratio=self._current_scroll_ratio() if keep_scroll else 0.0,
+        )
 
     def _sync_mirror_if_open(self, keep_scroll: bool = True):
         if self._is_mirror_open and self._mirror_window:
@@ -93,6 +97,7 @@ class MirrorSyncMixin:
             self._mirror_window.destroyed.connect(self._on_mirror_closed)
             self._mirror_window.resized.connect(self._on_mirror_resized)
             self._mirror_window.fullscreen_changed.connect(self._on_mirror_fs_changed)
+            self._mirror_window.play_pause_requested.connect(self._toggle_play)
         self._mirror_window.set_flip(self._horizontal_flip, self._vertical_flip)
         self._mirror_window.showNormal()
         self._position_mirror_on_secondary()
@@ -182,6 +187,12 @@ class MirrorSyncMixin:
 
     def _stop_sync_timer(self):
         self._sync_timer.stop()
+        self._invalidate_sync_requests()
+
+    def _invalidate_sync_requests(self):
+        # 重载、关闭或切换稿件后，旧页面的异步回调不得写入新状态。
+        self._sync_version += 1
+        self._sync_pending = False
 
     # ── 滚动 + 引导框同步（16ms 定时器） ─────────────────
     #  镜像侧：.flip-wrapper 的 transform 只包裹 .content，
@@ -191,10 +202,11 @@ class MirrorSyncMixin:
         if not self._is_mirror_open or not self._mirror_window:
             self._sync_timer.stop()
             return
-        if not self._page_ready:
+        if not self._page_ready or self._sync_pending:
             return
         self._sync_version += 1
         version = self._sync_version
+        self._sync_pending = True
         self._view.page().runJavaScript(
             "[window.pageYOffset, document.documentElement.scrollHeight - window.innerHeight, window.getReadingLineTop ? window.getReadingLineTop() : (window.innerHeight/3), (document.getElementById('rl')||{}).offsetHeight||0]",
             lambda result: self._on_sync_position(result, version)
@@ -206,7 +218,10 @@ class MirrorSyncMixin:
     def _on_sync_position(self, result, version):
         if version != self._sync_version:
             return
-        if result is None:
+        self._sync_pending = False
+        if not self._is_mirror_open or not self._page_ready:
+            return
+        if not isinstance(result, list) or len(result) < 4:
             return
         scroll_y = float(result[0]) if result[0] is not None else self._scroll_position
         max_y = float(result[1]) if len(result) > 1 and result[1] is not None else 1
@@ -214,7 +229,7 @@ class MirrorSyncMixin:
         rl_h = float(result[3]) if len(result) > 3 and result[3] is not None else 0
         self._scroll_position = scroll_y
         self._accumulated_scroll = scroll_y
-        if self._mirror_window and max_y > 0:
-            ratio = scroll_y / max_y
+        if self._mirror_window:
+            ratio = max(0.0, min(1.0, scroll_y / max_y)) if max_y > 0 else 0.0
             self._mirror_window.sync_scroll_pct(ratio)
             self._mirror_window.set_reading_line(rl_y, rl_h)

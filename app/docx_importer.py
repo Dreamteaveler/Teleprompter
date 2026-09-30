@@ -462,8 +462,12 @@ def _convert_wr_element(wr_element, images, formula_mode="html") -> list[str]:
     rPr = wr_element.find(qn("w:rPr"))
     bold = italic = underline = superscript = subscript = False
     if rPr is not None:
-        bold = rPr.find(qn("w:b")) is not None
-        italic = rPr.find(qn("w:i")) is not None
+        def enabled(tag):
+            node = rPr.find(qn(tag))
+            return node is not None and node.get(qn("w:val"), "true").lower() not in {"0", "false", "off"}
+
+        bold = enabled("w:b")
+        italic = enabled("w:i")
         underline = rPr.find(qn("w:u")) is not None
         vertAlign = rPr.find(qn("w:vertAlign"))
         if vertAlign is not None:

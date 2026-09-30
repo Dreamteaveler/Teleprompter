@@ -34,6 +34,7 @@ _FLIP_CSS = (
 class MirrorWindow(QMainWindow):
     resized = pyqtSignal()
     fullscreen_changed = pyqtSignal(bool)
+    play_pause_requested = pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -43,6 +44,8 @@ class MirrorWindow(QMainWindow):
 
         self._shortcut_mgr: ShortcutManager | None = None
         self._pending_scroll_y: float = 0.0
+        self._pending_scroll_ratio: float | None = None
+        self._page_ready = False
         self._pending_rl_y: float = 0.0
         self._resizing = False
         self._content_html: str = ""
@@ -64,9 +67,10 @@ class MirrorWindow(QMainWindow):
         self._view.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
         self.setCentralWidget(self._view)
 
-    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0):
+    def set_content(self, full_html: str, scroll_y: float = 0.0, rl_y: float = 0.0, scale: float = 1.0, *, scroll_ratio: float | None = None):
         self._content_html = full_html
         self._pending_scroll_y = scroll_y
+        self._pending_scroll_ratio = scroll_ratio
         self._pending_rl_y = rl_y
         self._mirror_scale = scale
         self._view.setZoomFactor(scale)
@@ -88,25 +92,26 @@ class MirrorWindow(QMainWindow):
 
     def sync_scroll(self, scroll_y: float):
         self._pending_scroll_y = scroll_y
-        if self._vflip:
-            self._view.page().runJavaScript(
-                "var maxY=document.documentElement.scrollHeight-window.innerHeight;"
-                + f"window.scrollTo(0, maxY - {scroll_y})"
-            )
-        else:
-            self._view.page().runJavaScript(
-                f"window.scrollTo(0, {scroll_y})"
-            )
+        self._pending_scroll_ratio = None
+        self._apply_pending_scroll()
 
     def sync_scroll_pct(self, ratio: float):
-        if self._vflip:
-            ratio = 1.0 - ratio
-        self._pending_scroll_y = ratio
-        js = (
-            "var maxY=document.documentElement.scrollHeight-window.innerHeight;"
-            + f"var target=maxY*{ratio};window.scrollTo(0,Math.max(0,target));"
+        # 始终保存主屏方向的逻辑比例，翻转仅在应用到DOM时进行一次。
+        self._pending_scroll_ratio = max(0.0, min(1.0, ratio))
+        self._apply_pending_scroll()
+
+    def _apply_pending_scroll(self):
+        if not self._page_ready:
+            return
+        if self._pending_scroll_ratio is not None:
+            ratio = 1.0 - self._pending_scroll_ratio if self._vflip else self._pending_scroll_ratio
+            target = f"maxY*{ratio}"
+        else:
+            target = f"maxY-{self._pending_scroll_y}" if self._vflip else str(self._pending_scroll_y)
+        self._view.page().runJavaScript(
+            "var maxY=Math.max(0,document.documentElement.scrollHeight-window.innerHeight);"
+            + f"var target={target};window.scrollTo(0,Math.max(0,Math.min(maxY,target)));"
         )
-        self._view.page().runJavaScript(js)
 
     #  ── 引导框同步 ──
     #  #rl 是 body 的直接子元素，position:fixed 相对真实视口。
@@ -138,6 +143,7 @@ class MirrorWindow(QMainWindow):
         )
 
     def _load_html(self):
+        self._page_ready = False
         html = self._content_html
         sx = -1 if self._hflip else 1
         sy = -1 if self._vflip else 1
@@ -151,16 +157,11 @@ class MirrorWindow(QMainWindow):
         self._pending_scroll_y = scroll_y
         self._load_html()
 
-    def _on_page_loaded(self, _ok: bool):
-        if self._vflip:
-            self._view.page().runJavaScript(
-                "var maxY=document.documentElement.scrollHeight-window.innerHeight;"
-                + f"window.scrollTo(0, maxY - {self._pending_scroll_y})"
-            )
-        elif self._pending_scroll_y > 0:
-            self._view.page().runJavaScript(
-                f"window.scrollTo(0, {self._pending_scroll_y})"
-            )
+    def _on_page_loaded(self, ok: bool):
+        self._page_ready = ok
+        if not ok:
+            return
+        self._apply_pending_scroll()
         self.set_reading_line(self._pending_rl_y)
 
     def _toggle_fullscreen(self):
@@ -222,6 +223,7 @@ class MirrorWindow(QMainWindow):
                 Qt.Key.Key_Minus: _noop,
             })
             self._shortcut_mgr.set_double_click_handler(self._toggle_fullscreen)
+            self._shortcut_mgr.set_keypad_toggle(self.play_pause_requested.emit)
         self._shortcut_mgr.install()
 
     def hideEvent(self, event):

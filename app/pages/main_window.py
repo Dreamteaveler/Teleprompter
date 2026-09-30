@@ -135,7 +135,9 @@ class MainWindow(QMainWindow):
         if self._edit_scroll_ratio <= 0:
             return
         self._prompter._pending_scroll_ratio = self._edit_scroll_ratio
-        self._prompter._scroll_position = self._edit_scroll_ratio * max(1, self._prompter._scroll_height)
+        self._prompter._scroll_position = self._edit_scroll_ratio * max(
+            0, self._prompter._scroll_height - self._prompter._view.height()
+        )
 
     def _on_prompter_completed(self):
         self._stack.setCurrentIndex(self.PAGE_HOME)
@@ -164,6 +166,10 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         logger.debug("closeEvent 触发")
+        if self._prompter and (self._prompter._inline_editing or self._prompter._inline_saving):
+            event.ignore()
+            self._prompter._finish_inline_edit(self.close)
+            return
         msg = QMessageBox(
             QMessageBox.Icon.Question,
             "退出确认", "确定要退出提词器吗？",

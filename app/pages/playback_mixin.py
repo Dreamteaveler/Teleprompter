@@ -26,6 +26,9 @@ class PlaybackMixin:
     """
 
     def _toggle_play(self):
+        if getattr(self, '_inline_editing', False) or getattr(self, '_inline_saving', False):
+            self._finish_inline_edit(self._toggle_play)
+            return
         if self._is_playing:
             self._pause()
         else:

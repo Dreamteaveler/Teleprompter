@@ -36,6 +36,19 @@ def run(cmd: list[str], **kwargs):
         raise RuntimeError(f"命令失败 (code={result.returncode}): {' '.join(cmd)}")
 
 
+def build_environment() -> dict[str, str]:
+    """只在打包子进程中隔离 DLL 搜索路径，避免其他软件的同名库混入。"""
+    import PyQt6
+
+    env = os.environ.copy()
+    python_dir = Path(sys.executable).resolve().parent
+    qt_bin = Path(PyQt6.__file__).resolve().parent / "Qt6" / "bin"
+    windows_dir = Path(env.get("SystemRoot", r"C:\Windows"))
+    paths = [qt_bin, python_dir, python_dir / "DLLs", windows_dir / "System32", windows_dir]
+    env["PATH"] = os.pathsep.join(str(path) for path in paths if path.is_dir())
+    return env
+
+
 def clean():
     """清理旧构建产物"""
     for d in (BUILD_DIR, DIST_DIR):
@@ -95,7 +108,7 @@ def build():
         "--noconfirm",
         "--clean",
         str(SPEC_FILE),
-    ])
+    ], env=build_environment())
 
     # 清理便携版 EXE 的中间产物（已在子文件夹中）
     leftover = DIST_DIR / "提词器.exe"

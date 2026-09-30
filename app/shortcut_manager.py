@@ -21,6 +21,8 @@ class ShortcutManager(QObject):
         self._shortcuts = {}
         self._release_shortcuts = {}
         self._double_click_handler = None
+        self._keypad_toggle = None
+        self._text_editing = False
 
         self._press_time = 0.0
         self._last_valid_click_time = 0.0
@@ -33,6 +35,13 @@ class ShortcutManager(QObject):
 
     def set_double_click_handler(self, handler):
         self._double_click_handler = handler
+
+    def set_keypad_toggle(self, handler):
+        self._keypad_toggle = handler
+
+    def set_text_editing(self, enabled: bool):
+        self._text_editing = enabled
+        self._last_valid_click_time = 0.0
 
     def install(self):
         app = QApplication.instance()
@@ -70,6 +79,8 @@ class ShortcutManager(QObject):
         if event.type() == QEvent.Type.MouseButtonRelease:
             if self._event_window(obj) is not self._window:
                 return False
+            if self._text_editing:
+                return False
             now = time.monotonic()
             if now - self._press_time < 0.3:
                 if self._last_valid_click_time > 0 and now - self._last_valid_click_time < 0.5:
@@ -102,6 +113,15 @@ class ShortcutManager(QObject):
             if event.isAutoRepeat():
                 return False
             key = event.key()
+            modifiers = event.modifiers()
+            if modifiers & (Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier | Qt.KeyboardModifier.MetaModifier):
+                return False
+            if self._text_editing and key not in (Qt.Key.Key_F1, Qt.Key.Key_F2, Qt.Key.Key_F11, Qt.Key.Key_Escape):
+                return False
+            if key in (Qt.Key.Key_0, Qt.Key.Key_Insert) and modifiers & Qt.KeyboardModifier.KeypadModifier:
+                if self._keypad_toggle is not None:
+                    self._keypad_toggle()
+                    return True
             handler = self._shortcuts.get(key)
             if handler is not None:
                 handler()
